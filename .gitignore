@@ -1,0 +1,175 @@
+# =============================================================================
+# Secrets and local configuration
+# =============================================================================
+.env
+.env.*
+!.env.example
+*.env
+!*.env.example
+.envrc
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+docker-compose.override.yml
+compose.override.yml
+
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Packaging and build output
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+MANIFEST
+pip-wheel-metadata/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Tests, coverage, and type checking
+.pytest_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.cover
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.dmypy.json
+
+# Notebooks
+.ipynb_checkpoints/
+
+# =============================================================================
+# Node / frontend
+# =============================================================================
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite and build output
+dist/
+dist-ssr/
+.vite/
+*.local
+coverage/
+
+# Test runners
+playwright-report/
+test-results/
+
+# =============================================================================
+# Databases, dumps, and local data
+# =============================================================================
+*.dump
+*.backup
+*.bak
+*.sql.gz
+*.sql.zip
+*.pgdump
+*.sqlite
+*.sqlite3
+*.db
+pgdata/
+postgres-data/
+dumps/
+backups/
+
+# Raw demo dataset files are downloaded by a script, not committed
+db/seed/data/
+
+# Local SQL dumps. Schema and role scripts in db/init/ are still tracked.
+dump*.sql
+*_dump.sql
+*-dump.sql
+backup*.sql
+
+# =============================================================================
+# Evaluation output
+# =============================================================================
+# Run output can contain full prompts and query results. Commit only reports
+# you have reviewed, by adding them with `git add -f`.
+eval/runs/
+eval/reports/*
+!eval/reports/.gitkeep
+
+# =============================================================================
+# Logs and temporary files
+# =============================================================================
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+*.pid
+
+# =============================================================================
+# IDEs and editors
+# =============================================================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.history/
+.fleet/
+.zed/
+
+# =============================================================================
+# AI assistant local state
+# =============================================================================
+.claude/settings.local.json
+
+# =============================================================================
+# Operating systems
+# =============================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
