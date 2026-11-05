@@ -1,12 +1,16 @@
+from argparse import Namespace
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
+from app.config import Settings
+from app.llm.base import LLMOutput
 from app.pipeline.errors import SqlExecutionError
 from app.pipeline.execute import QueryResult
 from eval.dataset import DIFFICULTIES, Question, load_dataset
-from eval.report import QuestionResult, RunInfo, render_report
-from eval.runner import limit_of, score
+from eval.report import QuestionResult, RunInfo, render_comparison, render_report
+from eval.runner import limit_of, retry_modes, score
 from eval.scoring import compare_results, normalize
 from tests.fakes import FakeLLM, sample_tables
 
@@ -258,6 +262,108 @@ def test_report_breaks_accuracy_down_by_difficulty() -> None:
     assert "## Failures (2)" in report
     assert "### m2 (medium): Wrong result" in report
     assert "about $30.00" in report
+
+
+def correction_info(max_retries: int) -> RunInfo:
+    return RunInfo(
+        "olist_v1", "2026-11-05T00:00:00Z", "model", "medium", "v1", 4.0, 20.0, max_retries
+    )
+
+
+def retried(result: QuestionResult, calls: int) -> QuestionResult:
+    return replace(result, llm_calls=calls)
+
+
+def test_comparison_shows_change_by_difficulty_and_flipped_questions() -> None:
+    baseline = [
+        result_row("e1", "easy", "correct"),
+        result_row("h1", "hard", "sql_error"),
+        result_row("h2", "hard", "correct"),
+    ]
+    corrected = [
+        result_row("e1", "easy", "correct"),
+        retried(result_row("h1", "hard", "correct"), 2),
+        retried(result_row("h2", "hard", "wrong_result"), 3),
+    ]
+
+    report = render_comparison(baseline, correction_info(0), corrected, correction_info(2))
+
+    assert "| Easy | 1 | 1 (100.0%) | 1 (100.0%) | +0.0 pts |" in report
+    assert "| Hard | 2 | 1 (50.0%) | 1 (50.0%) | +0.0 pts |" in report
+    assert "**Wrong without, correct with:** `h1`" in report
+    assert "**Correct without, wrong with:** `h2`" in report
+    assert "2 questions retried, and 1 of those ended correct" in report
+    assert "| LLM calls | 3 | 6 |" in report
+
+
+def test_comparison_reports_a_real_gain() -> None:
+    baseline = [result_row("h1", "hard", "sql_error"), result_row("h2", "hard", "correct")]
+    corrected = [
+        retried(result_row("h1", "hard", "correct"), 2),
+        result_row("h2", "hard", "correct"),
+    ]
+
+    report = render_comparison(baseline, correction_info(0), corrected, correction_info(2))
+
+    assert "| **Overall** | 2 | 1 (50.0%) | 2 (100.0%) | +50.0 pts |" in report
+
+
+def test_provider_outage_is_flagged_as_an_invalid_run() -> None:
+    results = [result_row("e1", "easy", "llm_error")]
+
+    assert "**Invalid run:** 1 questions" in render_report(results, correction_info(0))
+    comparison = render_comparison(results, correction_info(0), results, correction_info(2))
+    assert "**Invalid run:** 2 questions" in comparison
+
+
+def test_healthy_runs_have_no_outage_warning() -> None:
+    results = [result_row("e1", "easy", "wrong_result")]
+
+    assert "Invalid run" not in render_report(results, correction_info(0))
+
+
+def test_report_states_the_correction_mode() -> None:
+    results = [result_row("e1", "easy", "correct")]
+
+    assert "**Self-correction:** off" in render_report(results, correction_info(0))
+    assert "on, up to 2 retries" in render_report(results, correction_info(2))
+
+
+@pytest.mark.parametrize(
+    ("compare", "mode", "enabled", "expected"),
+    [
+        (True, None, True, [0, 2]),
+        (True, None, False, [0, 2]),
+        (False, "on", False, [2]),
+        (False, "off", True, [0]),
+        (False, None, True, [2]),
+        (False, None, False, [0]),
+    ],
+)
+def test_retry_modes(compare: bool, mode: str | None, enabled: bool, expected: list[int]) -> None:
+    args = Namespace(compare=compare, self_correction=mode)
+    settings = Settings(self_correction_enabled=enabled, self_correction_max_retries=2)
+
+    assert retry_modes(args, settings) == expected
+
+
+def test_score_adds_up_usage_across_retries(stub_execute: list) -> None:
+    stub_execute.append(SqlExecutionError("no such column", "SELECT x"))
+    stub_execute.append(QueryResult(["n"], ["int8"], [[42]], False))
+
+    class TwoAnswers(FakeLLM):
+        def generate_sql(self, system_prompt: str, question: str) -> LLMOutput:
+            output = super().generate_sql(system_prompt, question)
+            return replace(output, sql=f"SELECT {len(self.questions)}")
+
+    result = score(
+        question(), GOLD, sample_tables(), TwoAnswers("unused"), settings_stub(), max_retries=2
+    )
+
+    assert result.outcome == "correct"
+    assert result.llm_calls == 2
+    assert result.input_tokens == 200
+    assert result.output_tokens == 40
 
 
 def test_report_omits_cost_for_unknown_prices() -> None:

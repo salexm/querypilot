@@ -30,6 +30,8 @@ class AnthropicClient:
             raise LLMConfigurationError(f"Unknown LLM model: {self._model}.") from error
         except anthropic.RateLimitError as error:
             raise LLMError("The LLM provider is rate limiting requests.") from error
+        except anthropic.BadRequestError as error:
+            raise LLMError(provider_message(error.body)) from error
         except anthropic.APIStatusError as error:
             raise LLMError(f"The LLM provider returned status {error.status_code}.") from error
         except anthropic.APIConnectionError as error:
@@ -50,6 +52,13 @@ class AnthropicClient:
                 betas=[FALLBACK_BETA], fallbacks="default", **request
             )
         return self._client.messages.parse(**request)
+
+
+def provider_message(body: object) -> str:
+    """Pass on the provider's reason, because problems like low credit are fixable."""
+    details = body.get("error") if isinstance(body, dict) else None
+    message = details.get("message") if isinstance(details, dict) else None
+    return f"The LLM provider rejected the request: {message or 'no reason given'}"
 
 
 def parsed_result(response: Any) -> LLMOutput:

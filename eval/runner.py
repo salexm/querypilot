@@ -32,7 +32,14 @@ from app.pipeline.orchestrator import PROMPT_PATH, QueryPipeline
 from app.pipeline.validate import validate_sql
 from app.schema.introspect import Table, load_tables
 from eval.dataset import DIFFICULTIES, Question, load_dataset
-from eval.report import CORRECT, QuestionResult, RunInfo, render_report
+from eval.report import (
+    CORRECT,
+    QuestionResult,
+    RunInfo,
+    llm_error_count,
+    render_comparison,
+    render_report,
+)
 from eval.scoring import compare_results
 
 EVAL_DIR = Path(__file__).resolve().parent
@@ -59,15 +66,22 @@ OUTCOME_BY_ERROR: dict[type[Exception], str] = {
 
 
 class RecordingLLM:
-    """Keeps what the LLM returned, so failed queries still show their SQL."""
+    """Adds up usage across attempts and keeps the last SQL, even if it failed."""
 
     def __init__(self, llm: LLMClient) -> None:
         self._llm = llm
-        self.output: LLMOutput | None = None
+        self.calls = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.last_sql: str | None = None
 
     def generate_sql(self, system_prompt: str, question: str) -> LLMOutput:
-        self.output = self._llm.generate_sql(system_prompt, question)
-        return self.output
+        output = self._llm.generate_sql(system_prompt, question)
+        self.calls += 1
+        self.input_tokens += output.input_tokens
+        self.output_tokens += output.output_tokens
+        self.last_sql = output.sql
+        return output
 
 
 def score(
@@ -76,9 +90,12 @@ def score(
     tables: list[Table],
     llm: LLMClient,
     settings: Settings,
+    max_retries: int = 0,
 ) -> QuestionResult:
     recorder = RecordingLLM(llm)
-    pipeline = QueryPipeline(recorder, lambda: tables, lambda sql: execute_query(sql, settings))
+    pipeline = QueryPipeline(
+        recorder, lambda: tables, lambda sql: execute_query(sql, settings), max_retries
+    )
     outcome, reason = CORRECT, ""
     started = time.perf_counter()
     try:
@@ -92,7 +109,6 @@ def score(
         outcome, reason = "llm_error", str(error)
     except PipelineError as error:
         outcome, reason = OUTCOME_BY_ERROR[type(error)], error.message
-    output = recorder.output
     return QuestionResult(
         id=question.id,
         difficulty=question.difficulty,
@@ -101,10 +117,11 @@ def score(
         gold_sql=question.gold_sql,
         outcome=outcome,
         reason=reason,
-        generated_sql=output.sql if output else None,
+        generated_sql=recorder.last_sql,
         latency_seconds=time.perf_counter() - started,
-        input_tokens=output.input_tokens if output else 0,
-        output_tokens=output.output_tokens if output else 0,
+        input_tokens=recorder.input_tokens,
+        output_tokens=recorder.output_tokens,
+        llm_calls=recorder.calls,
     )
 
 
@@ -168,10 +185,11 @@ def run_all(
     llm: LLMClient,
     settings: Settings,
     concurrency: int,
+    max_retries: int,
 ) -> list[QuestionResult]:
     def run_one(question: Question) -> QuestionResult:
         gold = execute_query(question.gold_sql, settings)
-        result = score(question, gold, tables, llm, settings)
+        result = score(question, gold, tables, llm, settings, max_retries)
         print(f"{result.id}: {result.outcome} {result.reason}", flush=True)
         return result
 
@@ -179,15 +197,66 @@ def run_all(
         return list(pool.map(run_one, questions))
 
 
-def save_outputs(results: list[QuestionResult], info: RunInfo) -> Path:
+def file_stem(info: RunInfo) -> str:
     stamp = info.started_at.replace(":", "").replace("-", "")
+    mode = f"correction{info.max_retries}" if info.max_retries else "baseline"
+    return f"{info.dataset}-{stamp}-{mode}"
+
+
+def save_outputs(results: list[QuestionResult], info: RunInfo) -> Path:
     REPORT_DIR.mkdir(exist_ok=True)
     RUN_DIR.mkdir(exist_ok=True)
-    report_path = REPORT_DIR / f"{info.dataset}-{stamp}.md"
+    report_path = REPORT_DIR / f"{file_stem(info)}.md"
     report_path.write_text(render_report(results, info), encoding="utf-8")
     raw = json.dumps([asdict(result) for result in results], indent=2)
-    (RUN_DIR / f"{info.dataset}-{stamp}.json").write_text(raw, encoding="utf-8")
+    (RUN_DIR / f"{file_stem(info)}.json").write_text(raw, encoding="utf-8")
     return report_path
+
+
+def save_comparison(
+    baseline: tuple[list[QuestionResult], RunInfo],
+    corrected: tuple[list[QuestionResult], RunInfo],
+) -> Path:
+    path = REPORT_DIR / f"{file_stem(corrected[1])}-comparison.md"
+    path.write_text(render_comparison(*baseline, *corrected), encoding="utf-8")
+    return path
+
+
+def retry_modes(args: argparse.Namespace, settings: Settings) -> list[int]:
+    """Return the retry limit for each run, so --compare gets a run with and without."""
+    if args.compare:
+        return [0, settings.self_correction_max_retries]
+    if args.self_correction == "on":
+        return [settings.self_correction_max_retries]
+    if args.self_correction == "off":
+        return [0]
+    return [settings.correction_retries]
+
+
+def run_mode(
+    args: argparse.Namespace,
+    questions: list[Question],
+    tables: list[Table],
+    llm: LLMClient,
+    settings: Settings,
+    max_retries: int,
+) -> tuple[list[QuestionResult], RunInfo]:
+    print(f"Running with up to {max_retries} retries.", flush=True)
+    started_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    results = run_all(questions, tables, llm, settings, args.concurrency, max_retries)
+    input_price, output_price = MODEL_PRICES.get(settings.llm_model, (None, None))
+    info = RunInfo(
+        dataset=args.dataset,
+        started_at=started_at,
+        model=settings.llm_model,
+        effort=settings.llm_effort,
+        prompt=PROMPT_PATH.stem,
+        input_price=input_price,
+        output_price=output_price,
+        max_retries=max_retries,
+    )
+    print(f"Report saved to {save_outputs(results, info)}")
+    return results, info
 
 
 def select_questions(questions: list[Question], args: argparse.Namespace) -> list[Question]:
@@ -208,6 +277,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, help="run only the first N questions")
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--check-gold", action="store_true", help="check gold SQL, without an LLM")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--self-correction",
+        choices=("on", "off"),
+        help="override SELF_CORRECTION_ENABLED for this run",
+    )
+    mode.add_argument(
+        "--compare",
+        action="store_true",
+        help="run with and without self-correction, and write a comparison",
+    )
     return parser.parse_args()
 
 
@@ -225,19 +305,17 @@ def main() -> int:
     print(f"All {len(questions)} gold queries passed.")
     if args.check_gold:
         return 0
-    started_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    results = run_all(questions, tables, create_llm_client(settings), settings, args.concurrency)
-    input_price, output_price = MODEL_PRICES.get(settings.llm_model, (None, None))
-    info = RunInfo(
-        dataset=args.dataset,
-        started_at=started_at,
-        model=settings.llm_model,
-        effort=settings.llm_effort,
-        prompt=PROMPT_PATH.stem,
-        input_price=input_price,
-        output_price=output_price,
-    )
-    print(f"Report saved to {save_outputs(results, info)}")
+    llm = create_llm_client(settings)
+    runs = [
+        run_mode(args, questions, tables, llm, settings, max_retries)
+        for max_retries in retry_modes(args, settings)
+    ]
+    if args.compare:
+        print(f"Comparison saved to {save_comparison(runs[0], runs[1])}")
+    errors = sum(llm_error_count(results) for results, _ in runs)
+    if errors:
+        print(f"Invalid run: {errors} questions failed with LLM provider errors.")
+        return 1
     return 0
 
 

@@ -70,7 +70,17 @@ The benchmark has 123 questions with gold SQL: 42 easy, 45 medium, and 36 hard. 
 docker compose exec api python -m eval.runner
 ```
 
-Reports are saved to `eval/reports/`. A full run makes one LLM call per question.
+Reports are saved to `eval/reports/`. A full run makes at least one LLM call per question.
+
+## Self-correction
+
+When generated SQL fails or returns no rows, QueryPilot sends the problem back to the LLM and retries up to twice. Every retry passes the same safety checks. It can't catch SQL that runs and returns the wrong answer.
+
+Set `SELF_CORRECTION_ENABLED=false` in `.env` to turn it off, or compare both modes on the benchmark:
+
+```bash
+docker compose exec api python -m eval.runner --compare
+```
 
 ## Query safety
 
