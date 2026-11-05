@@ -47,7 +47,9 @@ FORBIDDEN_FUNCTIONS = frozenset(
 
 def parse_single_statement(sql: str) -> exp.Expression:
     try:
-        statements = [statement for statement in sqlglot.parse(sql, dialect="postgres") if statement]
+        statements = [
+            statement for statement in sqlglot.parse(sql, dialect="postgres") if statement
+        ]
     except SqlglotError as error:
         raise SqlValidationError("The generated SQL couldn't be parsed.", sql) from error
     if len(statements) != 1:

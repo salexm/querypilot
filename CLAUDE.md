@@ -4,11 +4,11 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 
 ## Current status
 
-**Milestones 1 and 2 are done, and Milestone 0 is in progress.** The API answers questions through `POST /query`. There's no frontend yet.
+**Milestones 0, 1, and 2 are done.** The API answers questions through `POST /query`, and CI runs lint and tests. There's no frontend yet.
 
 | # | Milestone | Status |
 |---|---|---|
-| 0 | Skeleton: Compose, health checks, linting, CI | In progress: Compose and health checks done; linting and CI remain |
+| 0 | Skeleton: Compose, health checks, linting, CI | Done |
 | 1 | Safe execution: data, roles, validator, executor | Done |
 | 2 | NL to SQL: schema service, LLM adapter, `/query` | Done |
 | 3 | Core UI: question flow, SQL view, table, errors | Not started |
@@ -28,6 +28,8 @@ Open decisions: public demo or local only, and target roles. Don't assume an ans
 - **Database:** PostgreSQL 17, with separate analytics and app databases
 - **Demo data:** Olist e-commerce dataset (CC BY-NC-SA 4.0), loaded by a Python seed script with `psycopg`
 - **Tests:** pytest for the backend
+- **Linting:** ruff for Python, ESLint for the frontend
+- **CI:** GitHub Actions runs lint and all tests on every push and pull request
 - **Local environment:** Docker Compose
 
 ## Architecture
@@ -42,7 +44,7 @@ Self-correction will be a bounded loop around generate, validate, and execute. D
 
 ## Folder structure
 
-This is the planned layout. `frontend/`, `eval/`, `.github/`, `backend/alembic/`, and `backend/app/store/` don't exist yet. Update this section when the real structure changes.
+This is the planned layout. `frontend/src/`, `eval/`, `backend/alembic/`, and `backend/app/store/` don't exist yet. Update this section when the real structure changes.
 
 ```text
 querypilot/
@@ -99,7 +101,7 @@ querypilot/
 
 **Testing**
 - Write backend tests with pytest in `backend/tests/`. Seed script tests live in `db/seed/tests/`.
-- Mark tests that need the seeded database with `integration`. They skip when it isn't reachable, so run them in the `api` container.
+- Mark tests that need the seeded database with `integration`. They skip when it isn't reachable, so run them in the `api` container. CI sets `REQUIRE_DATABASE=1` so they fail instead.
 - Add tests with each feature, and add a regression test with each bug fix.
 - Don't call a real LLM in unit tests. Use a fake adapter.
 - Run the relevant tests before calling a feature working, and report failures plainly.
@@ -130,6 +132,14 @@ docker compose exec api pytest    # run backend unit and integration tests
 # Seed script tests, from db/seed with Python 3.12
 pip install -r requirements-dev.txt
 python -m pytest
+
+# Python lint, from the repo root with ruff installed
+ruff check .
+ruff format --check .
+
+# Frontend lint, from frontend/
+npm ci
+npm run lint
 ```
 
 `db/init/` runs only on an empty data volume. To apply changed database settings, run `docker compose down -v`, which deletes the data, then start again and reseed.

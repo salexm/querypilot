@@ -75,7 +75,15 @@ OUTSIDE_TABLES = [
     "WITH pg_user AS (SELECT 1) SELECT * FROM pg_catalog.pg_user",
 ]
 
-NOT_SELECTS = ["", ";", "   ", "not sql at all (", "';DROP TABLE orders;--", "VALUES (1)", "TABLE orders"]
+NOT_SELECTS = [
+    "",
+    ";",
+    "   ",
+    "not sql at all (",
+    "';DROP TABLE orders;--",
+    "VALUES (1)",
+    "TABLE orders",
+]
 
 
 @pytest.mark.parametrize(
