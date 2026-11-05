@@ -4,16 +4,19 @@ import pytest
 
 from app.config import Settings
 from app.llm.anthropic_adapter import parsed_result, supports_fallback
-from app.llm.base import GeneratedSql, LLMConfigurationError, LLMError
+from app.llm.base import GeneratedSql, LLMConfigurationError, LLMError, LLMOutput
 from app.llm.factory import create_llm_client
 
 
 def response(stop_reason: str, parsed: GeneratedSql | None) -> SimpleNamespace:
-    return SimpleNamespace(stop_reason=stop_reason, parsed_output=parsed)
+    usage = SimpleNamespace(input_tokens=100, output_tokens=20)
+    return SimpleNamespace(stop_reason=stop_reason, parsed_output=parsed, usage=usage)
 
 
-def test_parsed_result_returns_output() -> None:
-    assert parsed_result(response("end_turn", GeneratedSql(sql="SELECT 1"))).sql == "SELECT 1"
+def test_parsed_result_returns_sql_and_usage() -> None:
+    output = parsed_result(response("end_turn", GeneratedSql(sql="SELECT 1")))
+
+    assert output == LLMOutput(sql="SELECT 1", input_tokens=100, output_tokens=20)
 
 
 @pytest.mark.parametrize(

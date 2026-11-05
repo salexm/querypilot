@@ -1,6 +1,6 @@
 line-length = 100
 target-version = "py312"
-src = ["backend", "db/seed"]
+src = [".", "backend", "db/seed"]
 
 [lint]
 select = [

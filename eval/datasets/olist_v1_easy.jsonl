@@ -1,0 +1,42 @@
+{"id":"e01","difficulty":"easy","tags":["aggregation"],"question":"How many orders are there in total?","gold_sql":"SELECT count(*) FROM orders"}
+{"id":"e02","difficulty":"easy","tags":["aggregation"],"question":"How many unique customers (actual people) are there?","gold_sql":"SELECT count(DISTINCT customer_unique_id) FROM customers"}
+{"id":"e03","difficulty":"easy","tags":["aggregation"],"question":"How many sellers are there?","gold_sql":"SELECT count(*) FROM sellers"}
+{"id":"e04","difficulty":"easy","tags":["aggregation"],"question":"How many products are there?","gold_sql":"SELECT count(*) FROM products"}
+{"id":"e05","difficulty":"easy","tags":["aggregation"],"question":"How many rows are in the product categories table?","gold_sql":"SELECT count(*) FROM product_categories"}
+{"id":"e06","difficulty":"easy","tags":["aggregation","filter"],"question":"How many orders have the status delivered?","gold_sql":"SELECT count(*) FROM orders WHERE order_status = 'delivered'"}
+{"id":"e07","difficulty":"easy","tags":["aggregation","filter"],"question":"How many orders were canceled?","gold_sql":"SELECT count(*) FROM orders WHERE order_status = 'canceled'"}
+{"id":"e08","difficulty":"easy","tags":["aggregation","group_by"],"question":"How many orders are there for each order status?","gold_sql":"SELECT order_status, count(*) FROM orders GROUP BY order_status"}
+{"id":"e09","difficulty":"easy","tags":["distinct"],"question":"List the distinct order statuses.","gold_sql":"SELECT DISTINCT order_status FROM orders"}
+{"id":"e10","difficulty":"easy","tags":["distinct"],"question":"List the distinct payment types.","gold_sql":"SELECT DISTINCT payment_type FROM order_payments"}
+{"id":"e11","difficulty":"easy","tags":["aggregation","group_by"],"question":"How many customer records are there in each state?","gold_sql":"SELECT customer_state, count(*) FROM customers GROUP BY customer_state"}
+{"id":"e12","difficulty":"easy","tags":["aggregation","group_by"],"question":"How many sellers are there in each state?","gold_sql":"SELECT seller_state, count(*) FROM sellers GROUP BY seller_state"}
+{"id":"e13","difficulty":"easy","tags":["aggregation","ranking"],"question":"Which state has the most customer records?","gold_sql":"SELECT customer_state FROM customers GROUP BY customer_state ORDER BY count(*) DESC LIMIT 1"}
+{"id":"e14","difficulty":"easy","tags":["aggregation","ranking"],"question":"What are the top 5 cities by number of customer records?","gold_sql":"SELECT customer_city FROM customers GROUP BY customer_city ORDER BY count(*) DESC LIMIT 5"}
+{"id":"e15","difficulty":"easy","tags":["aggregation"],"question":"What is the average review score across all reviews?","gold_sql":"SELECT avg(review_score) FROM order_reviews"}
+{"id":"e16","difficulty":"easy","tags":["aggregation","filter"],"question":"How many rows in the reviews table have a score of 5?","gold_sql":"SELECT count(*) FROM order_reviews WHERE review_score = 5"}
+{"id":"e17","difficulty":"easy","tags":["aggregation","group_by"],"question":"How many rows are in the reviews table for each review score?","gold_sql":"SELECT review_score, count(*) FROM order_reviews GROUP BY review_score"}
+{"id":"e18","difficulty":"easy","tags":["aggregation"],"question":"What is the average price of an order item?","gold_sql":"SELECT avg(price) FROM order_items"}
+{"id":"e19","difficulty":"easy","tags":["aggregation"],"question":"What is the highest price of any order item?","gold_sql":"SELECT max(price) FROM order_items"}
+{"id":"e20","difficulty":"easy","tags":["aggregation"],"question":"What is the lowest price of any order item?","gold_sql":"SELECT min(price) FROM order_items"}
+{"id":"e21","difficulty":"easy","tags":["aggregation"],"question":"What is the total of all payment values?","gold_sql":"SELECT sum(payment_value) FROM order_payments"}
+{"id":"e22","difficulty":"easy","tags":["aggregation","filter"],"question":"What is the average payment value for credit card payments?","gold_sql":"SELECT avg(payment_value) FROM order_payments WHERE payment_type = 'credit_card'"}
+{"id":"e23","difficulty":"easy","tags":["aggregation","group_by"],"question":"How many payments are there for each payment type?","gold_sql":"SELECT payment_type, count(*) FROM order_payments GROUP BY payment_type"}
+{"id":"e24","difficulty":"easy","tags":["aggregation","filter"],"question":"What is the average number of installments for credit card payments?","gold_sql":"SELECT avg(payment_installments) FROM order_payments WHERE payment_type = 'credit_card'"}
+{"id":"e25","difficulty":"easy","tags":["aggregation","filter"],"question":"How many products have no category?","gold_sql":"SELECT count(*) FROM products WHERE product_category_name IS NULL"}
+{"id":"e26","difficulty":"easy","tags":["aggregation"],"question":"What is the average product weight in grams?","gold_sql":"SELECT avg(product_weight_g) FROM products"}
+{"id":"e27","difficulty":"easy","tags":["aggregation"],"question":"What is the weight in grams of the heaviest product?","gold_sql":"SELECT max(product_weight_g) FROM products"}
+{"id":"e28","difficulty":"easy","tags":["aggregation","filter"],"question":"How many products have more than 5 photos?","gold_sql":"SELECT count(*) FROM products WHERE product_photos_qty > 5"}
+{"id":"e29","difficulty":"easy","tags":["aggregation","filter"],"question":"How many orders have no customer delivery date?","gold_sql":"SELECT count(*) FROM orders WHERE order_delivered_customer_date IS NULL"}
+{"id":"e30","difficulty":"easy","tags":["aggregation","filter"],"question":"How many rows in the reviews table have a non-null comment message?","gold_sql":"SELECT count(*) FROM order_reviews WHERE review_comment_message IS NOT NULL"}
+{"id":"e31","difficulty":"easy","tags":["aggregation","filter"],"question":"How many sellers are in the state of SP?","gold_sql":"SELECT count(*) FROM sellers WHERE seller_state = 'SP'"}
+{"id":"e32","difficulty":"easy","tags":["aggregation","filter"],"question":"How many customer records are in the city of rio de janeiro?","gold_sql":"SELECT count(*) FROM customers WHERE customer_city = 'rio de janeiro'"}
+{"id":"e33","difficulty":"easy","tags":["aggregation"],"question":"What is the total freight value across all order items?","gold_sql":"SELECT sum(freight_value) FROM order_items"}
+{"id":"e34","difficulty":"easy","tags":["aggregation"],"question":"How many order items are there?","gold_sql":"SELECT count(*) FROM order_items"}
+{"id":"e35","difficulty":"easy","tags":["aggregation","filter"],"question":"How many payments have 10 or more installments?","gold_sql":"SELECT count(*) FROM order_payments WHERE payment_installments >= 10"}
+{"id":"e36","difficulty":"easy","tags":["aggregation"],"question":"What is the largest number of items in a single order?","gold_sql":"SELECT max(order_item_id) FROM order_items"}
+{"id":"e37","difficulty":"easy","tags":["aggregation","date_filter"],"question":"What is the timestamp of the earliest order purchase?","gold_sql":"SELECT min(order_purchase_timestamp) FROM orders"}
+{"id":"e38","difficulty":"easy","tags":["aggregation","date_filter"],"question":"What is the timestamp of the latest order purchase?","gold_sql":"SELECT max(order_purchase_timestamp) FROM orders"}
+{"id":"e39","difficulty":"easy","tags":["aggregation","date_filter"],"question":"How many orders were placed in 2017?","gold_sql":"SELECT count(*) FROM orders WHERE order_purchase_timestamp >= '2017-01-01' AND order_purchase_timestamp < '2018-01-01'"}
+{"id":"e40","difficulty":"easy","tags":["aggregation","date_filter"],"question":"How many orders were placed in November 2017?","gold_sql":"SELECT count(*) FROM orders WHERE order_purchase_timestamp >= '2017-11-01' AND order_purchase_timestamp < '2017-12-01'"}
+{"id":"e41","difficulty":"easy","tags":["aggregation","date_filter"],"question":"How many orders were placed on 24 November 2017?","gold_sql":"SELECT count(*) FROM orders WHERE order_purchase_timestamp >= '2017-11-24' AND order_purchase_timestamp < '2017-11-25'"}
+{"id":"e42","difficulty":"easy","tags":["aggregation","distinct"],"question":"How many distinct cities do sellers operate in?","gold_sql":"SELECT count(DISTINCT seller_city) FROM sellers"}

@@ -4,7 +4,7 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 
 ## Current status
 
-**Milestones 0 to 4 are done.** The whole app runs with `docker compose up`: a chat UI asks the API, which returns SQL, rows, and an automatic chart. Milestone 5 is next.
+**Milestones 0 to 4 and 6 are done.** The whole app runs with `docker compose up`: a chat UI asks the API, which returns SQL, rows, and an automatic chart. A benchmark measures execution accuracy. Milestone 5 is still to do.
 
 | # | Milestone | Status |
 |---|---|---|
@@ -14,7 +14,7 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 | 3 | Core UI: question flow, SQL view, table, errors | Done |
 | 4 | Auto charts: rule-based chart selection | Done |
 | 5 | History and traces | Not started |
-| 6 | Benchmark: baseline accuracy, latency, cost | Not started |
+| 6 | Benchmark: baseline accuracy, latency, cost | Done, but the question set is too easy to show improvement |
 | 7 | Self-correction: retry loop, before-and-after results | Not started |
 | 8 | Portfolio polish: README results, diagram, demo GIF | Not started |
 
@@ -44,7 +44,7 @@ Self-correction will be a bounded loop around generate, validate, and execute. D
 
 ## Folder structure
 
-This is the planned layout. `eval/`, `backend/alembic/`, and `backend/app/store/` don't exist yet. Update this section when the real structure changes.
+This is the planned layout. `backend/alembic/` and `backend/app/store/` don't exist yet. Update this section when the real structure changes.
 
 ```text
 querypilot/
@@ -75,8 +75,10 @@ querypilot/
 │   └── features/query/
 └── eval/
     ├── datasets/              # questions and gold SQL
+    ├── dataset.py
     ├── runner.py
     ├── scoring.py
+    ├── report.py
     └── reports/               # ignored unless added with `git add -f`
 ```
 
@@ -105,6 +107,7 @@ querypilot/
 - Mark tests that need the seeded database with `integration`. They skip when it isn't reachable, so run them in the `api` container. CI sets `REQUIRE_DATABASE=1` so they fail instead.
 - Add tests with each feature, and add a regression test with each bug fix.
 - Don't call a real LLM in unit tests. Use a fake adapter.
+- When a benchmark question fails, read the failure before trusting the score. Clarify an ambiguous question, but never edit gold SQL to match generated SQL.
 - Run the relevant tests before calling a feature working, and report failures plainly.
 
 ## Safety rules
@@ -129,6 +132,8 @@ docker compose up --build         # start db, seed, api, and web
 docker compose exec api pytest    # run backend unit and integration tests
 docker compose exec web npm test  # run frontend tests
 SEED_FORCE=1 docker compose run --rm seed  # reload the dataset
+docker compose exec api python -m eval.runner --check-gold  # check gold SQL, no LLM calls
+docker compose exec api python -m eval.runner  # run the benchmark (about $1.40 on Opus)
 
 # Seed script tests, from db/seed with Python 3.12
 pip install -r requirements-dev.txt
@@ -152,7 +157,6 @@ These commands won't work until the milestone in brackets is finished. When one 
 
 ```bash
 docker compose exec api alembic upgrade head # migrate the app database [5]
-docker compose exec api python -m eval.runner # run the benchmark [6]
 ```
 
 The web app runs at `http://localhost:5173` and the API at `http://localhost:8000`. The seed runs on every start but skips when the data is already loaded.
