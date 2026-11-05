@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from app.llm.base import LLMClient
+from app.pipeline.chart import ChartSpec, select_chart
 from app.pipeline.errors import DatabaseUnavailableError, UnanswerableQuestionError
 from app.pipeline.execute import QueryResult
 from app.pipeline.validate import validate_sql
@@ -19,6 +20,7 @@ class PipelineResult:
     columns: list[str]
     rows: list[list[Any]]
     truncated: bool
+    chart: ChartSpec | None
 
 
 def build_system_prompt(tables: list[Table]) -> str:
@@ -49,4 +51,5 @@ class QueryPipeline:
         allowed_tables = frozenset(table.name for table in tables)
         sql = validate_sql(generated.sql, allowed_tables)
         result = self._execute(sql)
-        return PipelineResult(question, sql, result.columns, result.rows, result.truncated)
+        chart = select_chart(result.columns, result.column_types, result.rows, result.truncated)
+        return PipelineResult(question, sql, result.columns, result.rows, result.truncated, chart)

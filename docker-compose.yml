@@ -28,7 +28,6 @@ services:
 
   seed:
     build: ./db/seed
-    profiles: ["seed"]
     depends_on:
       db:
         condition: service_healthy
@@ -38,6 +37,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       ANALYTICS_DB_NAME: ${ANALYTICS_DB_NAME:?set ANALYTICS_DB_NAME in .env}
+      SEED_FORCE: ${SEED_FORCE:-}
     volumes:
       - ./db/seed/data:/app/data
 
@@ -47,6 +47,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      seed:
+        condition: service_completed_successfully
     environment:
       # Only the read-only role, so generated SQL can't use any other credentials.
       POSTGRES_HOST: db
@@ -72,6 +74,20 @@ services:
       timeout: 5s
       retries: 6
       start_period: 10s
+
+  web:
+    build: ./frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:?set VITE_API_BASE_URL in .env}
+      WATCH_POLLING: "true"
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
 volumes:
   pgdata:

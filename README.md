@@ -2,7 +2,7 @@
 
 A natural-language-to-SQL analytics assistant. Ask a question in plain English, and QueryPilot generates SQL from your schema, runs it read-only against PostgreSQL, and shows the results as a table and an automatic chart.
 
-> **Status:** early development. The API works, and the web app isn't built yet.
+> **Status:** early development. The app works end to end, and the benchmark is still to come.
 
 ## Planned stack
 
@@ -21,25 +21,28 @@ cp .env.example .env
 
 `.env` is ignored by git. Never commit real keys or passwords.
 
-## Demo data
+## Run it
 
-Start Postgres and load the demo dataset:
+Copy the environment template, then set `LLM_API_KEY` in `.env` to an [Anthropic API key](https://console.anthropic.com):
 
 ```bash
-docker compose up -d --wait db
-docker compose run --rm --build seed
+cp .env.example .env
+docker compose up --build
 ```
 
-The seed script downloads about 45 MB, verifies each file against a pinned checksum, and replaces the data in one transaction, so you can run it again safely.
+Open `http://localhost:5173` and ask a question. Answers show the generated SQL, a results table, and a bar or line chart when the data suits one.
+
+## Demo data
+
+The first start downloads about 45 MB, verifies each file against a pinned checksum, and loads the data in one transaction. Later starts skip this step.
 
 QueryPilot uses the [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce), licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). The raw data isn't stored in this repository. The seed script changes it slightly, as described in [the dataset decision](docs/decisions/0001-demo-dataset.md).
 
-## Ask a question
+## API
 
-Set `LLM_API_KEY` in `.env` to an [Anthropic API key](https://console.anthropic.com), then start the API:
+You can also ask questions directly:
 
 ```bash
-docker compose up -d --build --wait api
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{"question": "How many orders were delivered?"}'
@@ -54,7 +57,8 @@ The response includes the generated SQL and the rows:
   "columns": ["delivered_orders"],
   "rows": [[96478]],
   "row_count": 1,
-  "truncated": false
+  "truncated": false,
+  "chart": null
 }
 ```
 

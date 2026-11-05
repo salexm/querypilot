@@ -24,4 +24,13 @@ def sample_tables() -> list[Table]:
 
 
 def sample_result() -> QueryResult:
-    return QueryResult(columns=["total"], rows=[[42]], truncated=False)
+    return QueryResult(columns=["total"], column_types=["int8"], rows=[[42]], truncated=False)
+
+
+def chartable_result() -> QueryResult:
+    return QueryResult(
+        columns=["state", "orders"],
+        column_types=["text", "int8"],
+        rows=[["SP", 9], ["RJ", 4]],
+        truncated=False,
+    )

@@ -1,9 +1,16 @@
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies import get_pipeline
-from app.api.models import ErrorResponse, HealthResponse, QueryRequest, QueryResponse
+from app.api.models import (
+    ChartResponse,
+    ErrorResponse,
+    HealthResponse,
+    QueryRequest,
+    QueryResponse,
+)
 from app.config import Settings, get_settings
 from app.pipeline.execute import readonly_connection
 from app.pipeline.orchestrator import QueryPipeline
@@ -27,7 +34,9 @@ def query(
     pipeline: Annotated[QueryPipeline, Depends(get_pipeline)],
 ) -> QueryResponse:
     result = pipeline.run(request.question)
+    chart = result.chart
     return QueryResponse(
+        chart=ChartResponse(**asdict(chart)) if chart else None,
         question=result.question,
         sql=result.sql,
         columns=result.columns,

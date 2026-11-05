@@ -1,10 +1,16 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 
 class QueryRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1_000)
+
+
+class ChartResponse(BaseModel):
+    type: Literal["bar", "line"]
+    x_column: int
+    y_column: int
 
 
 class QueryResponse(BaseModel):
@@ -14,6 +20,7 @@ class QueryResponse(BaseModel):
     rows: list[list[Any]]
     row_count: int
     truncated: bool
+    chart: ChartResponse | None
 
 
 class ErrorResponse(BaseModel):

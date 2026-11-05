@@ -9,7 +9,7 @@ from app.main import app
 from app.pipeline.errors import DatabaseUnavailableError, QueryTimeoutError, SqlExecutionError
 from app.pipeline.execute import QueryResult
 from app.pipeline.orchestrator import QueryPipeline
-from tests.fakes import FakeLLM, sample_result, sample_tables
+from tests.fakes import FakeLLM, chartable_result, sample_result, sample_tables
 
 
 class FailingLLM:
@@ -54,7 +54,17 @@ def test_query_returns_sql_and_rows(client: TestClient) -> None:
         "rows": [[42]],
         "row_count": 1,
         "truncated": False,
+        "chart": None,
     }
+
+
+def test_query_returns_a_chart_when_one_fits(client: TestClient) -> None:
+    pipeline = QueryPipeline(FakeLLM("SELECT 1"), sample_tables, lambda _: chartable_result())
+    use_pipeline(pipeline)
+
+    response = client.post("/query", json={"question": "Orders by state?"})
+
+    assert response.json()["chart"] == {"type": "bar", "x_column": 0, "y_column": 1}
 
 
 @pytest.mark.parametrize("body", [{}, {"question": ""}, {"question": "x" * 1001}])

@@ -139,6 +139,17 @@ def test_duplicate_column_names_are_returned(settings: Settings) -> None:
     assert execute_query(sql, settings).columns == ["order_id", "order_id"]
 
 
+def test_real_column_types_drive_the_chart(settings: Settings) -> None:
+    sql = """
+        SELECT date_trunc('year', order_purchase_timestamp) AS period, count(*) AS orders
+        FROM orders GROUP BY 1 ORDER BY 1
+    """
+
+    result = execute_query(sql, settings)
+
+    assert result.column_types == ["timestamp", "int8"]
+
+
 def test_like_with_percent_runs_without_parameters(settings: Settings) -> None:
     sql = "SELECT customer_city FROM customers WHERE customer_city LIKE '%rio%' LIMIT 1"
 
