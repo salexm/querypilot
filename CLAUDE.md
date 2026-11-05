@@ -1,6 +1,6 @@
 # QueryPilot
 
-QueryPilot is a natural-language-to-SQL analytics assistant and a public portfolio project. A user types a question, an LLM generates SQL from the schema, the SQL runs read-only against PostgreSQL, and the results appear as a table and an automatic chart. An evaluation benchmark and self-correction on SQL errors come later.
+QueryPilot is a natural-language-to-SQL analytics assistant and a public portfolio project. A user types a question, an LLM generates SQL from the schema, the SQL runs read-only against PostgreSQL, and the results appear as a table and an automatic chart. A benchmark measures accuracy, and SQL errors and empty results get a bounded retry.
 
 ## Current status
 
@@ -16,7 +16,7 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 | 5 | History and traces | Not started |
 | 6 | Benchmark: baseline accuracy, latency, cost | Done, but the question set is too easy to show improvement |
 | 7 | Self-correction: retry loop, before-and-after results | Done, but the benchmark is too easy to show a gain |
-| 8 | Portfolio polish: README results, diagram, demo GIF | Not started |
+| 8 | Portfolio polish: README results, diagram, demo GIF | In progress: the demo GIF and live URL remain |
 
 The public demo runs on Render and Neon free tiers. See `docs/deployment.md`.
 
@@ -54,10 +54,11 @@ querypilot/
 ├── docker-compose.yml
 ├── render.yaml                # Render services for the public demo
 ├── .env.example
-├── .github/workflows/ci.yml
+├── CONTRIBUTING.md
+├── .github/                   # CI, issue templates, PR template
 ├── docs/
-│   ├── architecture.md
 │   ├── deployment.md          # public demo setup
+│   ├── images/                # README images
 │   └── decisions/             # short records of key choices
 ├── db/
 │   ├── init/                  # databases, roles, grants

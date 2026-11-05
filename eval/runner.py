@@ -130,7 +130,7 @@ def limit_of(sql: str) -> int | None:
     return int(limit.expression.name) if limit else None
 
 
-def sort_expression(root: exp.Select) -> exp.Expression:
+def sort_expression(root: exp.Select) -> exp.Expr:
     """Return the first ORDER BY term, following it to its definition if it's an alias."""
     term = root.args["order"].expressions[0].this
     for selected in root.selects:

@@ -130,10 +130,9 @@ def test_role_has_no_write_privilege_even_in_read_write_mode(settings: Settings,
     assert seller_count(settings) == SELLER_COUNT
 
 
-@pytest.mark.parametrize("dbname", ["postgres"])
-def test_role_cannot_connect_to_other_databases(settings: Settings, dbname: str) -> None:
+def test_role_cannot_connect_to_other_databases(settings: Settings) -> None:
     with pytest.raises(psycopg.OperationalError):
-        raw_connection(settings, dbname)
+        raw_connection(settings, "postgres")
 
 
 def test_duplicate_column_names_are_returned(settings: Settings) -> None:

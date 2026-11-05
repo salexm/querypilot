@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from contextlib import contextmanager
 from types import SimpleNamespace
 from typing import Any
 
@@ -15,6 +16,7 @@ from app.api.rate_limit import (
     get_query_limits,
 )
 from app.main import app
+from app.pipeline.errors import DatabaseUnavailableError
 from app.pipeline.orchestrator import QueryPipeline
 from tests.fakes import FakeLLM, sample_result, sample_tables
 
@@ -186,6 +188,34 @@ def test_health_does_not_touch_the_database(
     monkeypatch.setattr("app.api.routes.readonly_connection", fail)
 
     assert client.get("/health").json() == {"status": "ok"}
+
+
+def test_ready_reports_a_working_database(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    connection = SimpleNamespace(execute=lambda sql: None)
+
+    @contextmanager
+    def working(settings: object) -> Iterator[SimpleNamespace]:
+        yield connection
+
+    monkeypatch.setattr("app.api.routes.readonly_connection", working)
+
+    assert client.get("/health/ready").json() == {"status": "ok"}
+
+
+def test_ready_reports_a_database_outage(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def down(settings: object) -> None:
+        raise DatabaseUnavailableError("Couldn't connect to the analytics database.")
+
+    monkeypatch.setattr("app.api.routes.readonly_connection", down)
+
+    response = client.get("/health/ready")
+
+    assert response.status_code == 503
+    assert response.json()["code"] == "database_unavailable"
 
 
 @pytest.mark.parametrize("length", [501, 5000])
