@@ -199,6 +199,9 @@ describe("QueryPage", () => {
   });
 
   it.each([
+    ["rate_limited", "Please slow down a little"],
+    ["daily_limit_reached", "The demo is resting"],
+    ["invalid_question", "That question can't be sent"],
     ["unanswerable_question", "This data can't answer that"],
     ["query_timeout", "The query took too long"],
     ["llm_failed", "SQL couldn't be generated"],
@@ -210,6 +213,34 @@ describe("QueryPage", () => {
     await ask(user);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(title);
+  });
+
+  it("shows how long to wait when rate limited", async () => {
+    stubApi(429, {
+      code: "rate_limited",
+      message: "You're asking quickly. Please try again in 42 seconds.",
+      sql: null,
+    });
+    const user = renderPage();
+
+    await ask(user);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("try again in 42 seconds");
+  });
+
+  it("limits how long a question can be", () => {
+    renderPage();
+
+    expect(screen.getByLabelText("Your question")).toHaveAttribute("maxlength", "500");
+  });
+
+  it("credits the dataset", () => {
+    renderPage();
+
+    expect(screen.getByRole("link", { name: "Olist dataset" })).toHaveAttribute(
+      "href",
+      "https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce",
+    );
   });
 
   it("explains when the API is unreachable", async () => {

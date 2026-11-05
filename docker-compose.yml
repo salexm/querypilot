@@ -42,7 +42,10 @@ services:
       - ./db/seed/data:/app/data
 
   api:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        REQUIREMENTS: requirements-dev.txt
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       db:
@@ -65,6 +68,9 @@ services:
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
       SELF_CORRECTION_ENABLED: ${SELF_CORRECTION_ENABLED:-true}
       SELF_CORRECTION_MAX_RETRIES: ${SELF_CORRECTION_MAX_RETRIES:-2}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-5}
+      DAILY_QUERY_LIMIT: ${DAILY_QUERY_LIMIT:-200}
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-0}
       CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS in .env}
     ports:
       - "127.0.0.1:${API_HOST_PORT:-8000}:8000"

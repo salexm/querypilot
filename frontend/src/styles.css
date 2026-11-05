@@ -184,6 +184,15 @@ textarea {
   list-style: none;
 }
 
+.attribution {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+}
+
+.attribution a {
+  color: inherit;
+}
+
 .example {
   width: 100%;
   height: 100%;

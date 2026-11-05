@@ -32,6 +32,7 @@ def readonly_connection(settings: Settings) -> Iterator[psycopg.Connection]:
             dbname=settings.analytics_db_name,
             user=settings.analytics_readonly_user,
             password=settings.analytics_readonly_password.get_secret_value(),
+            sslmode=settings.postgres_sslmode,
             connect_timeout=CONNECT_TIMEOUT_SECONDS,
         )
     except psycopg.OperationalError as error:

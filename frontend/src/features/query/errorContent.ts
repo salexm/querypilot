@@ -4,6 +4,18 @@ interface ErrorContent {
 }
 
 const ERROR_CONTENT: Record<string, ErrorContent> = {
+  rate_limited: {
+    title: "Please slow down a little",
+    hint: "This public demo limits how often each visitor can ask, to keep it free to run.",
+  },
+  daily_limit_reached: {
+    title: "The demo is resting",
+    hint: "This public demo has a daily budget, and today's has been used.",
+  },
+  invalid_question: {
+    title: "That question can't be sent",
+    hint: "Try a shorter question.",
+  },
   unanswerable_question: {
     title: "This data can't answer that",
     hint: "Try asking about orders, products, sellers, customers, payments, or reviews.",

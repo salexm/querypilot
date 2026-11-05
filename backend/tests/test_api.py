@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_pipeline
+from app.api.rate_limit import enforce_query_limits
 from app.llm.base import LLMConfigurationError, LLMError, LLMOutput
 from app.main import app
 from app.pipeline.errors import DatabaseUnavailableError, QueryTimeoutError, SqlExecutionError
@@ -33,6 +34,7 @@ def succeed(sql: str) -> QueryResult:
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    app.dependency_overrides[enforce_query_limits] = lambda: None
     yield TestClient(app)
     app.dependency_overrides.clear()
 

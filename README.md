@@ -82,6 +82,10 @@ Set `SELF_CORRECTION_ENABLED=false` in `.env` to turn it off, or compare both mo
 docker compose exec api python -m eval.runner --compare
 ```
 
+## Deployment
+
+The public demo runs on Render and Neon free tiers. See [the deployment guide](docs/deployment.md).
+
 ## Query safety
 
 Generated SQL passes through several independent protections:
@@ -89,6 +93,7 @@ Generated SQL passes through several independent protections:
 - **Read-only role:** Queries run as a Postgres role with `SELECT` access only. This is the main protection.
 - **Validator:** `sqlglot` parses each query and rejects anything except a single `SELECT` on known tables, including writes hidden inside a `WITH` clause.
 - **Limits:** Every query has a statement timeout and a row cap, set by `QUERY_TIMEOUT_MS` and `QUERY_MAX_ROWS`.
+- **Rate limits:** `/query` allows 5 requests per minute for each visitor and 200 per day overall, and questions can be up to 500 characters.
 
 Run the tests, including attacks against a real database, with `docker compose exec api pytest`.
 

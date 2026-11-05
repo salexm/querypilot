@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import psycopg
+from psycopg import sql
 
 DATASET_URL = "https://www.kaggle.com/api/v1/datasets/download/olistbr/brazilian-ecommerce"
 SEED_DIR = Path(__file__).resolve().parent
@@ -273,14 +274,62 @@ def is_seeded(connection: psycopg.Connection) -> bool:
     return result is not None and result[0] is not None
 
 
+def readonly_role_statements(
+    role: str, password: str, database: str, timeout_ms: str, exists: bool
+) -> list[sql.Composable]:
+    """Build the grants for hosted databases, where db/init doesn't run.
+
+    Keep this role SQL-created. Some hosts give console-created roles broad
+    rights, including writes, which would defeat the point of the role.
+    """
+    name = sql.Identifier(role)
+    verb = sql.SQL(
+        "ALTER ROLE {} WITH LOGIN PASSWORD {}" if exists else "CREATE ROLE {} LOGIN PASSWORD {}"
+    )
+    return [
+        verb.format(name, sql.Literal(password)),
+        sql.SQL("ALTER ROLE {} SET default_transaction_read_only = on").format(name),
+        sql.SQL("ALTER ROLE {} SET statement_timeout = {}").format(name, sql.Literal(timeout_ms)),
+        sql.SQL("REVOKE CREATE ON SCHEMA public FROM PUBLIC"),
+        sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(sql.Identifier(database), name),
+        sql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(name),
+        sql.SQL("GRANT SELECT ON ALL TABLES IN SCHEMA public TO {}").format(name),
+        sql.SQL("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {}").format(
+            name
+        ),
+    ]
+
+
+def role_exists(connection: psycopg.Connection, role: str) -> bool:
+    query = "SELECT 1 FROM pg_roles WHERE rolname = %s"
+    return connection.execute(query, (role,)).fetchone() is not None
+
+
+def setup_readonly_role(connection: psycopg.Connection) -> None:
+    role = os.environ["ANALYTICS_READONLY_USER"]
+    statements = readonly_role_statements(
+        role,
+        os.environ["ANALYTICS_READONLY_PASSWORD"],
+        os.environ["ANALYTICS_DB_NAME"],
+        os.environ["QUERY_TIMEOUT_MS"],
+        role_exists(connection, role),
+    )
+    with connection.transaction():
+        for statement in statements:
+            connection.execute(statement)
+    print(f"Read-only role {role} is ready.")
+
+
 def main() -> int:
     with psycopg.connect(**connection_settings(), autocommit=True) as connection:
         if is_seeded(connection) and not os.environ.get("SEED_FORCE"):
             print("Dataset already loaded. Set SEED_FORCE=1 to reload it.")
-            return 0
-        ensure_dataset(DATA_DIR, ARCHIVE_PATH, DATASET_URL, EXPECTED_HASHES)
-        load_database(connection, DATA_DIR)
-    print("Seed complete.")
+        else:
+            ensure_dataset(DATA_DIR, ARCHIVE_PATH, DATASET_URL, EXPECTED_HASHES)
+            load_database(connection, DATA_DIR)
+            print("Seed complete.")
+        if os.environ.get("SETUP_READONLY_ROLE"):
+            setup_readonly_role(connection)
     return 0
 
 

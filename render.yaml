@@ -1,0 +1,55 @@
+# Render Blueprint. Values marked `sync: false` are secrets or per-deploy settings:
+# Render asks for them once and stores them, so they never live in this repo.
+services:
+  - type: web
+    name: querypilot-api
+    runtime: docker
+    plan: free
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: "5432"
+      - key: POSTGRES_SSLMODE
+        value: require
+      - key: ANALYTICS_DB_NAME
+        sync: false
+      - key: ANALYTICS_READONLY_USER
+        sync: false
+      - key: ANALYTICS_READONLY_PASSWORD
+        sync: false
+      - key: LLM_PROVIDER
+        value: anthropic
+      # Haiku scored 99.2% on the benchmark at a small fraction of Opus's cost.
+      - key: LLM_MODEL
+        value: claude-haiku-5-5
+      - key: LLM_API_KEY
+        sync: false
+      - key: SELF_CORRECTION_ENABLED
+        value: "true"
+      - key: SELF_CORRECTION_MAX_RETRIES
+        value: "2"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "5"
+      - key: DAILY_QUERY_LIMIT
+        value: "200"
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: querypilot-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # Public on purpose: Vite builds this into the browser code. Never put a secret here.
+      - key: VITE_API_BASE_URL
+        sync: false

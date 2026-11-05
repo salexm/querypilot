@@ -18,7 +18,9 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 | 7 | Self-correction: retry loop, before-and-after results | Done, but the benchmark is too easy to show a gain |
 | 8 | Portfolio polish: README results, diagram, demo GIF | Not started |
 
-Open decisions: public demo or local only, and target roles. Don't assume an answer; ask when the work depends on one.
+The public demo runs on Render and Neon free tiers. See `docs/deployment.md`.
+
+Open decisions: target roles. Don't assume an answer; ask when the work depends on one.
 
 ## Stack
 
@@ -31,6 +33,7 @@ Open decisions: public demo or local only, and target roles. Don't assume an ans
 - **Linting:** ruff for Python, ESLint for the frontend
 - **CI:** GitHub Actions runs lint and all tests on every push and pull request
 - **Local environment:** Docker Compose
+- **Deployment:** Render for the frontend and API, Neon for Postgres, defined in `render.yaml`
 
 ## Architecture
 
@@ -49,10 +52,12 @@ This is the planned layout. `backend/alembic/` and `backend/app/store/` don't ex
 ```text
 querypilot/
 ├── docker-compose.yml
+├── render.yaml                # Render services for the public demo
 ├── .env.example
 ├── .github/workflows/ci.yml
 ├── docs/
 │   ├── architecture.md
+│   ├── deployment.md          # public demo setup
 │   └── decisions/             # short records of key choices
 ├── db/
 │   ├── init/                  # databases, roles, grants
@@ -118,6 +123,8 @@ These apply to all work, because the repo is public and the app runs LLM-generat
 - Keep the Postgres role as the main protection and the validator as a second layer. Don't weaken either one to make a query work.
 - Validate SQL by parsing it with `sqlglot`, not with regex.
 - Always enforce the statement timeout and row cap.
+- Keep the per-IP and daily limits on `/query`, because every call spends real money.
+- Create the read-only role on hosted databases with SQL through the seed, never in a provider's console, which can grant writes.
 - Never commit real keys, passwords, or `.env` files. Add new settings to `.env.example` with placeholder values.
 - Never put secrets in `VITE_*` variables, because they're exposed to the browser.
 - Review eval output before committing it, because it can contain full prompts and query results.
@@ -161,7 +168,7 @@ These commands won't work until the milestone in brackets is finished. When one 
 docker compose exec api alembic upgrade head # migrate the app database [5]
 ```
 
-The web app runs at `http://localhost:5173` and the API at `http://localhost:8000`. The seed runs on every start but skips when the data is already loaded.
+Locally, the web app runs at `http://localhost:5173` and the API at `http://localhost:8000`. `/health` skips the database so platform pings don't wake it, and `/health/ready` checks it. The seed runs on every start but skips when the data is already loaded.
 
 ## Workflow rules
 
