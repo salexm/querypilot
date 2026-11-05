@@ -4,6 +4,8 @@ The attack tests call the executor directly, skipping the validator, to prove
 that the read-only role protects the data on its own.
 """
 
+import os
+
 import psycopg
 import pytest
 from psycopg import errors as pg_errors
@@ -20,15 +22,22 @@ pytestmark = pytest.mark.integration
 SELLER_COUNT = 3_095
 
 
+def database_missing(reason: str) -> None:
+    """Skip locally, but fail in CI so a broken database can't look like a pass."""
+    if os.environ.get("REQUIRE_DATABASE"):
+        pytest.fail(reason)
+    pytest.skip(reason)
+
+
 @pytest.fixture(scope="module")
 def settings() -> Settings:
     settings = Settings(query_timeout_ms=500, query_max_rows=5)
     try:
         with readonly_connection(settings) as connection:
             if not load_tables(connection):
-                pytest.skip("The analytics database hasn't been seeded.")
+                database_missing("The analytics database hasn't been seeded.")
     except DatabaseUnavailableError:
-        pytest.skip("The analytics database isn't reachable.")
+        database_missing("The analytics database isn't reachable.")
     return settings
 
 

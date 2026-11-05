@@ -61,7 +61,9 @@ def test_ensure_dataset_extracts_a_valid_local_archive(tmp_path: Path) -> None:
     write_archive(archive, "data.csv", "a,b\n")
     data_dir = tmp_path / "data"
 
-    seed.ensure_dataset(data_dir, archive, "http://unused.invalid", {"data.csv": sha256_text("a,b\n")})
+    seed.ensure_dataset(
+        data_dir, archive, "http://unused.invalid", {"data.csv": sha256_text("a,b\n")}
+    )
 
     assert (data_dir / "data.csv").read_text(encoding="utf-8") == "a,b\n"
 
@@ -71,7 +73,9 @@ def test_ensure_dataset_rejects_changed_source_data(tmp_path: Path) -> None:
     write_archive(archive, "data.csv", "tampered\n")
 
     with pytest.raises(ValueError, match="Checksum mismatch for data.csv"):
-        seed.ensure_dataset(tmp_path / "data", archive, "http://unused.invalid", {"data.csv": sha256_text("a,b\n")})
+        seed.ensure_dataset(
+            tmp_path / "data", archive, "http://unused.invalid", {"data.csv": sha256_text("a,b\n")}
+        )
 
 
 def test_ensure_dataset_skips_download_when_files_are_valid(
@@ -84,7 +88,12 @@ def test_ensure_dataset_skips_download_when_files_are_valid(
 
     monkeypatch.setattr(seed, "download_archive", fail_download)
 
-    seed.ensure_dataset(tmp_path, tmp_path / "olist.zip", "http://unused.invalid", {"data.csv": sha256_text("a,b\n")})
+    seed.ensure_dataset(
+        tmp_path,
+        tmp_path / "olist.zip",
+        "http://unused.invalid",
+        {"data.csv": sha256_text("a,b\n")},
+    )
 
 
 def test_expected_rows_include_added_translations() -> None:

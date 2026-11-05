@@ -74,7 +74,9 @@ def execute_query(sql: str, settings: Settings) -> QueryResult:
             message = f"The query ran longer than {settings.query_timeout_ms} ms."
             raise QueryTimeoutError(message, sql) from error
         except psycopg.OperationalError as error:
-            raise DatabaseUnavailableError("Lost the analytics database connection.", sql) from error
+            raise DatabaseUnavailableError(
+                "Lost the analytics database connection.", sql
+            ) from error
         except psycopg.Error as error:
             detail = error.diag.message_primary or "The database rejected the query."
             raise SqlExecutionError(detail, sql) from error

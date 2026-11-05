@@ -54,9 +54,15 @@ class Table:
 
 def load_tables(connection: psycopg.Connection) -> list[Table]:
     tables: dict[str, Table] = {}
-    for name, comment, column, data_type, not_null, primary_key, column_comment in (
-        connection.execute(COLUMNS_QUERY).fetchall()
-    ):
+    for (
+        name,
+        comment,
+        column,
+        data_type,
+        not_null,
+        primary_key,
+        column_comment,
+    ) in connection.execute(COLUMNS_QUERY).fetchall():
         table = tables.setdefault(name, Table(name, comment))
         table.columns.append(Column(column, data_type, not_null, primary_key, column_comment))
     for name, definition in connection.execute(FOREIGN_KEYS_QUERY).fetchall():
