@@ -82,10 +82,7 @@ def select(
 
 def difficulty_groups(results: list[QuestionResult]) -> list[tuple[str, list[QuestionResult]]]:
     groups = [
-        (
-            level.capitalize(),
-            select(results, lambda result, level=level: result.difficulty == level),
-        )
+        (level.capitalize(), [result for result in results if result.difficulty == level])
         for level in DIFFICULTIES
     ]
     return [*groups, ("**Overall**", results)]
@@ -93,9 +90,7 @@ def difficulty_groups(results: list[QuestionResult]) -> list[tuple[str, list[Que
 
 def tag_groups(results: list[QuestionResult]) -> list[tuple[str, list[QuestionResult]]]:
     tags = sorted({tag for result in results for tag in result.tags})
-    return [
-        (f"`{tag}`", select(results, lambda result, tag=tag: tag in result.tags)) for tag in tags
-    ]
+    return [(f"`{tag}`", [result for result in results if tag in result.tags]) for tag in tags]
 
 
 def outcome_table(results: list[QuestionResult]) -> list[str]:

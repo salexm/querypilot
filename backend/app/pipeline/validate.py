@@ -45,7 +45,7 @@ FORBIDDEN_FUNCTIONS = frozenset(
 )
 
 
-def parse_single_statement(sql: str) -> exp.Expression:
+def parse_single_statement(sql: str) -> exp.Expr:
     try:
         statements = [
             statement for statement in sqlglot.parse(sql, dialect="postgres") if statement
@@ -57,7 +57,7 @@ def parse_single_statement(sql: str) -> exp.Expression:
     return statements[0]
 
 
-def check_nodes(root: exp.Expression, sql: str) -> None:
+def check_nodes(root: exp.Expr, sql: str) -> None:
     for node in root.walk():
         if isinstance(node, FORBIDDEN_NODES):
             raise SqlValidationError(f"{type(node).__name__} isn't allowed.", sql)
@@ -68,14 +68,14 @@ def function_name(function: exp.Func) -> str:
     return name.lower()
 
 
-def check_functions(root: exp.Expression, sql: str) -> None:
+def check_functions(root: exp.Expr, sql: str) -> None:
     for function in root.find_all(exp.Func):
         name = function_name(function)
         if name in FORBIDDEN_FUNCTIONS or name.startswith(FORBIDDEN_FUNCTION_PREFIXES):
             raise SqlValidationError(f"The function {name} isn't allowed.", sql)
 
 
-def check_tables(root: exp.Expression, allowed_tables: frozenset[str], sql: str) -> None:
+def check_tables(root: exp.Expr, allowed_tables: frozenset[str], sql: str) -> None:
     cte_names = {cte.alias.lower() for cte in root.find_all(exp.CTE)}
     for table in root.find_all(exp.Table):
         if not isinstance(table.this, exp.Identifier):

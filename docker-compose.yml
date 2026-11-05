@@ -47,6 +47,8 @@ services:
       args:
         REQUIREMENTS: requirements-dev.txt
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # Local only: the bind mounts need write access for benchmark reports.
+    user: root
     depends_on:
       db:
         condition: service_healthy

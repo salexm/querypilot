@@ -108,7 +108,9 @@ def find_mapping(
     )
 
 
-def compare_results(gold_rows: list[Row], candidate_rows: list[Row], ordered: bool) -> Comparison:
+def compare_results(
+    gold_rows: Sequence[Row], candidate_rows: Sequence[Row], ordered: bool
+) -> Comparison:
     gold = [[normalize(cell) for cell in row] for row in gold_rows]
     candidate = [[normalize(cell) for cell in row] for row in candidate_rows]
     if len(gold) != len(candidate):

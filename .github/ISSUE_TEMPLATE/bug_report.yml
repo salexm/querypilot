@@ -1,0 +1,42 @@
+name: Bug report
+description: Report something that doesn't work as expected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include the question you asked and any error message. Don't include API keys or passwords.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run docker compose up --build
+        2. Ask "..."
+        3. See the error
+    validations:
+      required: true
+  - type: textarea
+    id: sql
+    attributes:
+      label: Generated SQL
+      description: Paste the SQL if it's relevant.
+      render: sql
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did this happen?
+      options:
+        - Running locally
+        - Live demo
+    validations:
+      required: true
