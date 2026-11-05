@@ -11,6 +11,7 @@ import pytest
 from psycopg import errors as pg_errors
 
 from app.config import Settings
+from app.llm.base import LLMOutput
 from app.pipeline.errors import DatabaseUnavailableError, QueryTimeoutError, SqlExecutionError
 from app.pipeline.execute import execute_query, readonly_connection
 from app.pipeline.orchestrator import QueryPipeline
@@ -160,6 +161,29 @@ def test_every_gold_query_passes_its_checks(settings: Settings) -> None:
         tables = load_tables(connection)
 
     assert check_gold(load_dataset("olist_v1"), tables, gold_settings) == []
+
+
+def test_self_correction_recovers_from_a_real_postgres_error(settings: Settings) -> None:
+    class CorrectingLLM:
+        def __init__(self) -> None:
+            self.prompts: list[str] = []
+
+        def generate_sql(self, system_prompt: str, question: str) -> LLMOutput:
+            self.prompts.append(question)
+            bad, good = "SELECT nope FROM orders", "SELECT count(*) AS total FROM orders"
+            return LLMOutput(sql=bad if len(self.prompts) == 1 else good)
+
+    def load_schema() -> list[Table]:
+        with readonly_connection(settings) as connection:
+            return load_tables(connection)
+
+    llm = CorrectingLLM()
+    pipeline = QueryPipeline(llm, load_schema, lambda sql: execute_query(sql, settings), 2)
+
+    result = pipeline.run("How many orders are there?")
+
+    assert result.rows == [[99_441]]
+    assert 'column "nope" does not exist' in llm.prompts[1]
 
 
 def test_like_with_percent_runs_without_parameters(settings: Settings) -> None:

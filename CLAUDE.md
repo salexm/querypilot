@@ -4,7 +4,7 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 
 ## Current status
 
-**Milestones 0 to 4 and 6 are done.** The whole app runs with `docker compose up`: a chat UI asks the API, which returns SQL, rows, and an automatic chart. A benchmark measures execution accuracy. Milestone 5 is still to do.
+**Milestones 0 to 4, 6, and 7 are done.** The whole app runs with `docker compose up`: a chat UI asks the API, which returns SQL, rows, and an automatic chart. A benchmark measures execution accuracy, and SQL errors and empty results get up to 2 retries. Milestone 5 is still to do.
 
 | # | Milestone | Status |
 |---|---|---|
@@ -15,7 +15,7 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 | 4 | Auto charts: rule-based chart selection | Done |
 | 5 | History and traces | Not started |
 | 6 | Benchmark: baseline accuracy, latency, cost | Done, but the question set is too easy to show improvement |
-| 7 | Self-correction: retry loop, before-and-after results | Not started |
+| 7 | Self-correction: retry loop, before-and-after results | Done, but the benchmark is too easy to show a gain |
 | 8 | Portfolio polish: README results, diagram, demo GIF | Not started |
 
 Open decisions: public demo or local only, and target roles. Don't assume an answer; ask when the work depends on one.
@@ -40,7 +40,7 @@ The API and the benchmark both call one headless pipeline:
 question → schema context → generate SQL → validate → execute → chart spec → response + saved trace
 ```
 
-Self-correction will be a bounded loop around generate, validate, and execute. Don't put pipeline logic in API routes, or the benchmark can't reuse it.
+Self-correction is a bounded loop around generate, validate, and execute. Every retry passes through the same validator and read-only executor. Don't put pipeline logic in API routes, or the benchmark can't reuse it.
 
 ## Folder structure
 
@@ -134,6 +134,8 @@ docker compose exec web npm test  # run frontend tests
 SEED_FORCE=1 docker compose run --rm seed  # reload the dataset
 docker compose exec api python -m eval.runner --check-gold  # check gold SQL, no LLM calls
 docker compose exec api python -m eval.runner  # run the benchmark (about $1.40 on Opus)
+docker compose exec api python -m eval.runner --self-correction off  # override the setting for one run
+docker compose exec api python -m eval.runner --compare  # run with and without self-correction (about $2.70 on Opus)
 
 # Seed script tests, from db/seed with Python 3.12
 pip install -r requirements-dev.txt

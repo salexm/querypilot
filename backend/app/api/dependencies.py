@@ -20,4 +20,5 @@ def get_pipeline(settings: Annotated[Settings, Depends(get_settings)]) -> QueryP
         llm=create_llm_client(settings),
         load_schema=partial(load_schema, settings),
         execute=partial(execute_query, settings=settings),
+        max_retries=settings.correction_retries,
     )

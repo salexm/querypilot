@@ -37,6 +37,7 @@ def query(
     chart = result.chart
     return QueryResponse(
         chart=ChartResponse(**asdict(chart)) if chart else None,
+        attempts=len(result.attempts),
         question=result.question,
         sql=result.sql,
         columns=result.columns,

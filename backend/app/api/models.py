@@ -21,6 +21,7 @@ class QueryResponse(BaseModel):
     row_count: int
     truncated: bool
     chart: ChartResponse | None
+    attempts: int
 
 
 class ErrorResponse(BaseModel):

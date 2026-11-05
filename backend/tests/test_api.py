@@ -55,6 +55,7 @@ def test_query_returns_sql_and_rows(client: TestClient) -> None:
         "row_count": 1,
         "truncated": False,
         "chart": None,
+        "attempts": 1,
     }
 
 

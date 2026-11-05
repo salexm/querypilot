@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.config import Settings
-from app.llm.anthropic_adapter import parsed_result, supports_fallback
+from app.llm.anthropic_adapter import parsed_result, provider_message, supports_fallback
 from app.llm.base import GeneratedSql, LLMConfigurationError, LLMError, LLMOutput
 from app.llm.factory import create_llm_client
 
@@ -26,6 +26,19 @@ def test_parsed_result_returns_sql_and_usage() -> None:
 def test_parsed_result_rejects_unusable_responses(item: SimpleNamespace) -> None:
     with pytest.raises(LLMError):
         parsed_result(item)
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ({"error": {"message": "Your credit balance is too low."}}, "credit balance is too low"),
+        ({"error": {}}, "no reason given"),
+        ("not a dict", "no reason given"),
+        (None, "no reason given"),
+    ],
+)
+def test_provider_message_explains_rejected_requests(body: object, expected: str) -> None:
+    assert expected in provider_message(body)
 
 
 @pytest.mark.parametrize(
