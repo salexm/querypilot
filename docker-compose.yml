@@ -41,5 +41,37 @@ services:
     volumes:
       - ./db/seed/data:/app/data
 
+  api:
+    build: ./backend
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Only the read-only role, so generated SQL can't use any other credentials.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      ANALYTICS_DB_NAME: ${ANALYTICS_DB_NAME:?set ANALYTICS_DB_NAME in .env}
+      ANALYTICS_READONLY_USER: ${ANALYTICS_READONLY_USER:?set ANALYTICS_READONLY_USER in .env}
+      ANALYTICS_READONLY_PASSWORD: ${ANALYTICS_READONLY_PASSWORD:?set ANALYTICS_READONLY_PASSWORD in .env}
+      QUERY_TIMEOUT_MS: ${QUERY_TIMEOUT_MS:?set QUERY_TIMEOUT_MS in .env}
+      QUERY_MAX_ROWS: ${QUERY_MAX_ROWS:?set QUERY_MAX_ROWS in .env}
+      LLM_PROVIDER: ${LLM_PROVIDER:?set LLM_PROVIDER in .env}
+      LLM_MODEL: ${LLM_MODEL:?set LLM_MODEL in .env}
+      LLM_API_KEY: ${LLM_API_KEY:?set LLM_API_KEY in .env}
+      LLM_EFFORT: ${LLM_EFFORT:-medium}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS in .env}
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as r; r.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
 volumes:
   pgdata:

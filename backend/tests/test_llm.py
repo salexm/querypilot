@@ -1,0 +1,43 @@
+from types import SimpleNamespace
+
+import pytest
+
+from app.config import Settings
+from app.llm.anthropic_adapter import parsed_result, supports_fallback
+from app.llm.base import GeneratedSql, LLMConfigurationError, LLMError
+from app.llm.factory import create_llm_client
+
+
+def response(stop_reason: str, parsed: GeneratedSql | None) -> SimpleNamespace:
+    return SimpleNamespace(stop_reason=stop_reason, parsed_output=parsed)
+
+
+def test_parsed_result_returns_output() -> None:
+    assert parsed_result(response("end_turn", GeneratedSql(sql="SELECT 1"))).sql == "SELECT 1"
+
+
+@pytest.mark.parametrize(
+    "item",
+    [response("refusal", None), response("max_tokens", None), response("end_turn", None)],
+)
+def test_parsed_result_rejects_unusable_responses(item: SimpleNamespace) -> None:
+    with pytest.raises(LLMError):
+        parsed_result(item)
+
+
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [("claude-opus-5-5", True), ("claude-sonnet-5-5", True), ("claude-haiku-5-5", False)],
+)
+def test_supports_fallback(model: str, expected: bool) -> None:
+    assert supports_fallback(model) is expected
+
+
+def test_factory_requires_an_api_key() -> None:
+    with pytest.raises(LLMConfigurationError, match="LLM_API_KEY"):
+        create_llm_client(Settings(llm_api_key=""))
+
+
+def test_factory_rejects_unknown_provider() -> None:
+    with pytest.raises(LLMConfigurationError, match="Unsupported"):
+        create_llm_client(Settings(llm_api_key="test-key", llm_provider="other"))
