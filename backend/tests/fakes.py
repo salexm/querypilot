@@ -1,4 +1,4 @@
-from app.llm.base import GeneratedSql
+from app.llm.base import LLMOutput
 from app.pipeline.execute import QueryResult
 from app.schema.introspect import Column, Table
 
@@ -11,10 +11,10 @@ class FakeLLM:
         self.system_prompts: list[str] = []
         self.questions: list[str] = []
 
-    def generate_sql(self, system_prompt: str, question: str) -> GeneratedSql:
+    def generate_sql(self, system_prompt: str, question: str) -> LLMOutput:
         self.system_prompts.append(system_prompt)
         self.questions.append(question)
-        return GeneratedSql(sql=self.sql)
+        return LLMOutput(sql=self.sql, input_tokens=100, output_tokens=20)
 
 
 def sample_tables() -> list[Table]:

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Protocol
 
 from pydantic import BaseModel, Field
@@ -9,6 +10,13 @@ class GeneratedSql(BaseModel):
     sql: str = Field(description="One PostgreSQL SELECT statement, or an empty string.")
 
 
+@dataclass(frozen=True)
+class LLMOutput:
+    sql: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
 class LLMError(Exception):
     """The provider couldn't produce SQL."""
 
@@ -18,4 +26,4 @@ class LLMConfigurationError(LLMError):
 
 
 class LLMClient(Protocol):
-    def generate_sql(self, system_prompt: str, question: str) -> GeneratedSql: ...
+    def generate_sql(self, system_prompt: str, question: str) -> LLMOutput: ...

@@ -62,6 +62,16 @@ The response includes the generated SQL and the rows:
 }
 ```
 
+## Evaluation
+
+The benchmark has 123 questions with gold SQL: 42 easy, 45 medium, and 36 hard. It scores execution accuracy by comparing result sets, not SQL text.
+
+```bash
+docker compose exec api python -m eval.runner
+```
+
+Reports are saved to `eval/reports/`. A full run makes one LLM call per question.
+
 ## Query safety
 
 Generated SQL passes through several independent protections:

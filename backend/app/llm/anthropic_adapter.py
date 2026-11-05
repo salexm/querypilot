@@ -2,7 +2,7 @@ from typing import Any
 
 import anthropic
 
-from app.llm.base import GeneratedSql, LLMConfigurationError, LLMError
+from app.llm.base import GeneratedSql, LLMConfigurationError, LLMError, LLMOutput
 
 MAX_TOKENS = 16_000
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
@@ -21,7 +21,7 @@ class AnthropicClient:
         self._model = model
         self._effort = effort
 
-    def generate_sql(self, system_prompt: str, question: str) -> GeneratedSql:
+    def generate_sql(self, system_prompt: str, question: str) -> LLMOutput:
         try:
             response = self._send(system_prompt, question)
         except anthropic.AuthenticationError as error:
@@ -52,7 +52,7 @@ class AnthropicClient:
         return self._client.messages.parse(**request)
 
 
-def parsed_result(response: Any) -> GeneratedSql:
+def parsed_result(response: Any) -> LLMOutput:
     """Check why generation stopped before trusting the output."""
     if response.stop_reason == "refusal":
         raise LLMError("The LLM declined this question.")
@@ -60,4 +60,8 @@ def parsed_result(response: Any) -> GeneratedSql:
         raise LLMError("The LLM ran out of output space.")
     if response.parsed_output is None:
         raise LLMError("The LLM returned output in an unexpected format.")
-    return response.parsed_output
+    return LLMOutput(
+        sql=response.parsed_output.sql,
+        input_tokens=response.usage.input_tokens,
+        output_tokens=response.usage.output_tokens,
+    )

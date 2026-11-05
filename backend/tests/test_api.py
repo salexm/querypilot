@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_pipeline
-from app.llm.base import GeneratedSql, LLMConfigurationError, LLMError
+from app.llm.base import LLMConfigurationError, LLMError, LLMOutput
 from app.main import app
 from app.pipeline.errors import DatabaseUnavailableError, QueryTimeoutError, SqlExecutionError
 from app.pipeline.execute import QueryResult
@@ -16,7 +16,7 @@ class FailingLLM:
     def __init__(self, error: LLMError) -> None:
         self.error = error
 
-    def generate_sql(self, system_prompt: str, question: str) -> GeneratedSql:
+    def generate_sql(self, system_prompt: str, question: str) -> LLMOutput:
         raise self.error
 
 

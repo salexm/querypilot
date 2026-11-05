@@ -15,6 +15,8 @@ from app.pipeline.errors import DatabaseUnavailableError, QueryTimeoutError, Sql
 from app.pipeline.execute import execute_query, readonly_connection
 from app.pipeline.orchestrator import QueryPipeline
 from app.schema.introspect import Table, format_schema, load_tables
+from eval.dataset import load_dataset
+from eval.runner import check_gold
 from tests.fakes import FakeLLM
 
 pytestmark = pytest.mark.integration
@@ -148,6 +150,16 @@ def test_real_column_types_drive_the_chart(settings: Settings) -> None:
     result = execute_query(sql, settings)
 
     assert result.column_types == ["timestamp", "int8"]
+
+
+def test_every_gold_query_passes_its_checks(settings: Settings) -> None:
+    gold_settings = settings.model_copy(
+        update={"query_timeout_ms": 10_000, "query_max_rows": 10_000}
+    )
+    with readonly_connection(settings) as connection:
+        tables = load_tables(connection)
+
+    assert check_gold(load_dataset("olist_v1"), tables, gold_settings) == []
 
 
 def test_like_with_percent_runs_without_parameters(settings: Settings) -> None:
