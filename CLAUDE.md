@@ -4,13 +4,13 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 
 ## Current status
 
-**Milestones 0 and 1 are in progress.** Postgres runs in Docker Compose with the Olist dataset loaded. No application code exists yet.
+**Milestones 1 and 2 are done, and Milestone 0 is in progress.** The API answers questions through `POST /query`. There's no frontend yet.
 
 | # | Milestone | Status |
 |---|---|---|
-| 0 | Skeleton: Compose, health checks, linting, CI | In progress: Postgres service and health check done |
-| 1 | Safe execution: data, roles, validator, executor | In progress: data and roles done |
-| 2 | NL to SQL: schema service, LLM adapter, `/query` | Not started |
+| 0 | Skeleton: Compose, health checks, linting, CI | In progress: Compose and health checks done; linting and CI remain |
+| 1 | Safe execution: data, roles, validator, executor | Done |
+| 2 | NL to SQL: schema service, LLM adapter, `/query` | Done |
 | 3 | Core UI: question flow, SQL view, table, errors | Not started |
 | 4 | Auto charts: rule-based chart selection | Not started |
 | 5 | History and traces | Not started |
@@ -18,12 +18,13 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 | 7 | Self-correction: retry loop, before-and-after results | Not started |
 | 8 | Portfolio polish: README results, diagram, demo GIF | Not started |
 
-Open decisions: LLM provider, public demo or local only, and target roles. Don't assume an answer; ask when the work depends on one.
+Open decisions: public demo or local only, and target roles. Don't assume an answer; ask when the work depends on one.
 
 ## Stack
 
 - **Frontend:** React, Vite, TypeScript, TanStack Query, Recharts
-- **Backend:** Python, FastAPI, `sqlglot` for SQL validation, Alembic for app database migrations
+- **Backend:** Python, FastAPI, `sqlglot` for SQL validation, `psycopg`, Alembic for app database migrations (not added yet)
+- **LLM:** Anthropic Claude, behind the adapter in `backend/app/llm/`
 - **Database:** PostgreSQL 17, with separate analytics and app databases
 - **Demo data:** Olist e-commerce dataset (CC BY-NC-SA 4.0), loaded by a Python seed script with `psycopg`
 - **Tests:** pytest for the backend
@@ -41,7 +42,7 @@ Self-correction will be a bounded loop around generate, validate, and execute. D
 
 ## Folder structure
 
-This is the planned layout. So far, only the root setup files, `docker-compose.yml`, `db/`, and `docs/decisions/` exist. Update this section when the real structure changes.
+This is the planned layout. `frontend/`, `eval/`, `.github/`, `backend/alembic/`, and `backend/app/store/` don't exist yet. Update this section when the real structure changes.
 
 ```text
 querypilot/
@@ -98,6 +99,7 @@ querypilot/
 
 **Testing**
 - Write backend tests with pytest in `backend/tests/`. Seed script tests live in `db/seed/tests/`.
+- Mark tests that need the seeded database with `integration`. They skip when it isn't reachable, so run them in the `api` container.
 - Add tests with each feature, and add a regression test with each bug fix.
 - Don't call a real LLM in unit tests. Use a fake adapter.
 - Run the relevant tests before calling a feature working, and report failures plainly.
@@ -122,6 +124,8 @@ These apply to all work, because the repo is public and the app runs LLM-generat
 cp .env.example .env              # then fill in your own values
 docker compose up -d --wait db    # start Postgres and wait until it's healthy
 docker compose run --rm --build seed  # download, verify, and load the dataset
+docker compose up -d --build --wait api  # start the API on http://localhost:8000
+docker compose exec api pytest    # run backend unit and integration tests
 
 # Seed script tests, from db/seed with Python 3.12
 pip install -r requirements-dev.txt
@@ -135,13 +139,12 @@ python -m pytest
 These commands won't work until the milestone in brackets is finished. When one starts working, move it to "Works today" and correct it to match reality.
 
 ```bash
-docker compose up --build                    # start api and web as well as db [0]
-docker compose exec api pytest               # run backend tests [0]
-docker compose exec api alembic upgrade head # migrate the app database [1]
+docker compose up --build                    # start web as well as db and api [3]
+docker compose exec api alembic upgrade head # migrate the app database [5]
 docker compose exec api python -m eval.runner # run the benchmark [6]
 ```
 
-Planned local URLs are `http://localhost:5173` for the web app and `http://localhost:8000` for the API.
+The API runs at `http://localhost:8000`. The planned web app URL is `http://localhost:5173`.
 
 ## Workflow rules
 
