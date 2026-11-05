@@ -11,6 +11,7 @@ from app.api.models import (
     QueryRequest,
     QueryResponse,
 )
+from app.api.rate_limit import enforce_query_limits
 from app.config import Settings, get_settings
 from app.pipeline.execute import readonly_connection
 from app.pipeline.orchestrator import QueryPipeline
@@ -18,8 +19,15 @@ from app.pipeline.orchestrator import QueryPipeline
 router = APIRouter()
 
 
-@router.get("/health", responses={503: {"model": ErrorResponse}})
-def health(settings: Annotated[Settings, Depends(get_settings)]) -> HealthResponse:
+@router.get("/health")
+def health() -> HealthResponse:
+    """Say the process is up. The platform calls this often, so it skips the database."""
+    return HealthResponse(status="ok")
+
+
+@router.get("/health/ready", responses={503: {"model": ErrorResponse}})
+def ready(settings: Annotated[Settings, Depends(get_settings)]) -> HealthResponse:
+    """Check the database too, for humans and deploy checks."""
     with readonly_connection(settings) as connection:
         connection.execute("SELECT 1")
     return HealthResponse(status="ok")
@@ -27,7 +35,8 @@ def health(settings: Annotated[Settings, Depends(get_settings)]) -> HealthRespon
 
 @router.post(
     "/query",
-    responses={status: {"model": ErrorResponse} for status in (422, 502, 503, 504)},
+    dependencies=[Depends(enforce_query_limits)],
+    responses={status: {"model": ErrorResponse} for status in (422, 429, 502, 503, 504)},
 )
 def query(
     request: QueryRequest,

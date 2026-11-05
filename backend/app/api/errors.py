@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api.models import ErrorResponse
+from app.api.models import MAX_QUESTION_LENGTH, ErrorResponse
+from app.api.rate_limit import RateLimitExceededError
 from app.llm.base import LLMConfigurationError, LLMError
 from app.pipeline.errors import (
     DatabaseUnavailableError,
@@ -38,7 +40,21 @@ def handle_llm_error(_: Request, error: Exception) -> JSONResponse:
     return error_response(502, "llm_failed", str(error))
 
 
+def handle_rate_limit(_: Request, error: Exception) -> JSONResponse:
+    assert isinstance(error, RateLimitExceededError)
+    response = error_response(429, error.code, error.message)
+    response.headers["Retry-After"] = str(error.retry_after)
+    return response
+
+
+def handle_invalid_request(_: Request, error: Exception) -> JSONResponse:
+    message = f"Please enter a question of up to {MAX_QUESTION_LENGTH} characters."
+    return error_response(422, "invalid_question", message)
+
+
 def register_error_handlers(app: FastAPI) -> None:
     for error_type in PIPELINE_ERRORS:
         app.add_exception_handler(error_type, handle_pipeline_error)
     app.add_exception_handler(LLMError, handle_llm_error)
+    app.add_exception_handler(RateLimitExceededError, handle_rate_limit)
+    app.add_exception_handler(RequestValidationError, handle_invalid_request)

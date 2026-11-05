@@ -5,7 +5,7 @@ interface ChatInputProps {
   onSend: (question: string) => void;
 }
 
-const MAX_QUESTION_LENGTH = 1000;
+const MAX_QUESTION_LENGTH = 500;
 
 export function ChatInput({ isPending, onSend }: ChatInputProps) {
   const [text, setText] = useState("");

@@ -35,6 +35,11 @@ function Welcome({ onPick }: { onPick: (question: string) => void }) {
           </li>
         ))}
       </ul>
+      <p className="attribution muted">
+        Data:{" "}
+        <a href="https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce">Olist dataset</a>,{" "}
+        <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>
+      </p>
     </section>
   );
 }

@@ -112,6 +112,37 @@ def test_is_seeded_checks_for_the_orders_table(table: str | None, expected: bool
     assert seed.is_seeded(FakeConnection(table)) is expected
 
 
+def rendered_statements(exists: bool, password: str = "pw") -> list[str]:
+    statements = seed.readonly_role_statements("reader", password, "neondb", "10000", exists)
+    return [statement.as_string(None) for statement in statements]
+
+
+def test_readonly_role_is_created_with_read_only_defaults() -> None:
+    statements = rendered_statements(exists=False)
+
+    assert statements[0].startswith('CREATE ROLE "reader" LOGIN PASSWORD')
+    assert any("default_transaction_read_only = on" in item for item in statements)
+    assert any("statement_timeout = '10000'" in item for item in statements)
+    assert any(
+        'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "reader"' in item for item in statements
+    )
+
+
+def test_readonly_role_is_never_granted_writes() -> None:
+    joined = " ".join(rendered_statements(exists=False)).upper()
+
+    for forbidden in ("INSERT", "UPDATE", "DELETE", "TRUNCATE", "SUPERUSER", "GRANT ALL"):
+        assert forbidden not in joined
+
+
+def test_existing_readonly_role_gets_its_password_updated() -> None:
+    assert rendered_statements(exists=True)[0].startswith('ALTER ROLE "reader" WITH LOGIN PASSWORD')
+
+
+def test_readonly_role_password_is_escaped() -> None:
+    assert "'it''s; DROP ROLE x'" in rendered_statements(False, "it's; DROP ROLE x")[0]
+
+
 def test_expected_rows_include_added_translations() -> None:
     categories = next(spec for spec in seed.TABLES if spec.table == "product_categories")
 
