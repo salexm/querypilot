@@ -4,15 +4,15 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 
 ## Current status
 
-**Milestones 0, 1, and 2 are done.** The API answers questions through `POST /query`, and CI runs lint and tests. There's no frontend yet.
+**Milestones 0 to 4 are done.** The whole app runs with `docker compose up`: a chat UI asks the API, which returns SQL, rows, and an automatic chart. Milestone 5 is next.
 
 | # | Milestone | Status |
 |---|---|---|
 | 0 | Skeleton: Compose, health checks, linting, CI | Done |
 | 1 | Safe execution: data, roles, validator, executor | Done |
 | 2 | NL to SQL: schema service, LLM adapter, `/query` | Done |
-| 3 | Core UI: question flow, SQL view, table, errors | Not started |
-| 4 | Auto charts: rule-based chart selection | Not started |
+| 3 | Core UI: question flow, SQL view, table, errors | Done |
+| 4 | Auto charts: rule-based chart selection | Done |
 | 5 | History and traces | Not started |
 | 6 | Benchmark: baseline accuracy, latency, cost | Not started |
 | 7 | Self-correction: retry loop, before-and-after results | Not started |
@@ -27,7 +27,7 @@ Open decisions: public demo or local only, and target roles. Don't assume an ans
 - **LLM:** Anthropic Claude, behind the adapter in `backend/app/llm/`
 - **Database:** PostgreSQL 17, with separate analytics and app databases
 - **Demo data:** Olist e-commerce dataset (CC BY-NC-SA 4.0), loaded by a Python seed script with `psycopg`
-- **Tests:** pytest for the backend
+- **Tests:** pytest for the backend, Vitest and Testing Library for the frontend
 - **Linting:** ruff for Python, ESLint for the frontend
 - **CI:** GitHub Actions runs lint and all tests on every push and pull request
 - **Local environment:** Docker Compose
@@ -44,7 +44,7 @@ Self-correction will be a bounded loop around generate, validate, and execute. D
 
 ## Folder structure
 
-This is the planned layout. `frontend/src/`, `eval/`, `backend/alembic/`, and `backend/app/store/` don't exist yet. Update this section when the real structure changes.
+This is the planned layout. `eval/`, `backend/alembic/`, and `backend/app/store/` don't exist yet. Update this section when the real structure changes.
 
 ```text
 querypilot/
@@ -98,6 +98,7 @@ querypilot/
 - Use strict mode and avoid `any`.
 - Keep API calls in `frontend/src/api/`, not in components.
 - Handle loading, empty, and error states in every feature that fetches data.
+- Put frontend tests beside the code they cover, as `*.test.ts` or `*.test.tsx`.
 
 **Testing**
 - Write backend tests with pytest in `backend/tests/`. Seed script tests live in `db/seed/tests/`.
@@ -123,11 +124,11 @@ These apply to all work, because the repo is public and the app runs LLM-generat
 ### Works today
 
 ```bash
-cp .env.example .env              # then fill in your own values
-docker compose up -d --wait db    # start Postgres and wait until it's healthy
-docker compose run --rm --build seed  # download, verify, and load the dataset
-docker compose up -d --build --wait api  # start the API on http://localhost:8000
+cp .env.example .env              # then set LLM_API_KEY and your own passwords
+docker compose up --build         # start db, seed, api, and web
 docker compose exec api pytest    # run backend unit and integration tests
+docker compose exec web npm test  # run frontend tests
+SEED_FORCE=1 docker compose run --rm seed  # reload the dataset
 
 # Seed script tests, from db/seed with Python 3.12
 pip install -r requirements-dev.txt
@@ -137,9 +138,10 @@ python -m pytest
 ruff check .
 ruff format --check .
 
-# Frontend lint, from frontend/
+# Frontend checks, from frontend/
 npm ci
 npm run lint
+npm run build
 ```
 
 `db/init/` runs only on an empty data volume. To apply changed database settings, run `docker compose down -v`, which deletes the data, then start again and reseed.
@@ -149,12 +151,11 @@ npm run lint
 These commands won't work until the milestone in brackets is finished. When one starts working, move it to "Works today" and correct it to match reality.
 
 ```bash
-docker compose up --build                    # start web as well as db and api [3]
 docker compose exec api alembic upgrade head # migrate the app database [5]
 docker compose exec api python -m eval.runner # run the benchmark [6]
 ```
 
-The API runs at `http://localhost:8000`. The planned web app URL is `http://localhost:5173`.
+The web app runs at `http://localhost:5173` and the API at `http://localhost:8000`. The seed runs on every start but skips when the data is already loaded.
 
 ## Workflow rules
 

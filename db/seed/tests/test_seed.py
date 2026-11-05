@@ -96,6 +96,22 @@ def test_ensure_dataset_skips_download_when_files_are_valid(
     )
 
 
+class FakeConnection:
+    def __init__(self, table: str | None) -> None:
+        self.table = table
+
+    def execute(self, query: str) -> "FakeConnection":
+        return self
+
+    def fetchone(self) -> tuple[str | None]:
+        return (self.table,)
+
+
+@pytest.mark.parametrize(("table", "expected"), [("orders", True), (None, False)])
+def test_is_seeded_checks_for_the_orders_table(table: str | None, expected: bool) -> None:
+    assert seed.is_seeded(FakeConnection(table)) is expected
+
+
 def test_expected_rows_include_added_translations() -> None:
     categories = next(spec for spec in seed.TABLES if spec.table == "product_categories")
 

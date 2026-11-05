@@ -17,6 +17,7 @@ CONNECT_TIMEOUT_SECONDS = 5
 @dataclass(frozen=True)
 class QueryResult:
     columns: list[str]
+    column_types: list[str]
     rows: list[list[Any]]
     truncated: bool
 
@@ -52,14 +53,21 @@ def to_json_value(value: Any) -> Any:
     return str(value)
 
 
+def type_name(connection: psycopg.Connection, type_code: int) -> str:
+    info = connection.adapters.types.get(type_code)
+    return info.name if info else "unknown"
+
+
 def fetch_capped(connection: psycopg.Connection, sql: str, max_rows: int) -> QueryResult:
     """Fetch through a server-side cursor, so the cap holds whatever the SQL says."""
     with connection.cursor(name="generated_query") as cursor:
         cursor.execute(sql)
         fetched = cursor.fetchmany(max_rows + 1)
-        columns = [column.name for column in cursor.description or []]
+        description = cursor.description or []
+    columns = [column.name for column in description]
+    column_types = [type_name(connection, column.type_code) for column in description]
     rows = [[to_json_value(value) for value in row] for row in fetched[:max_rows]]
-    return QueryResult(columns, rows, truncated=len(fetched) > max_rows)
+    return QueryResult(columns, column_types, rows, truncated=len(fetched) > max_rows)
 
 
 def execute_query(sql: str, settings: Settings) -> QueryResult:

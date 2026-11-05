@@ -267,9 +267,18 @@ def connection_settings() -> dict[str, str]:
     }
 
 
+def is_seeded(connection: psycopg.Connection) -> bool:
+    """The load is one transaction, so any seeded table means all of them are there."""
+    result = connection.execute("SELECT to_regclass('public.orders')").fetchone()
+    return result is not None and result[0] is not None
+
+
 def main() -> int:
-    ensure_dataset(DATA_DIR, ARCHIVE_PATH, DATASET_URL, EXPECTED_HASHES)
     with psycopg.connect(**connection_settings(), autocommit=True) as connection:
+        if is_seeded(connection) and not os.environ.get("SEED_FORCE"):
+            print("Dataset already loaded. Set SEED_FORCE=1 to reload it.")
+            return 0
+        ensure_dataset(DATA_DIR, ARCHIVE_PATH, DATASET_URL, EXPECTED_HASHES)
         load_database(connection, DATA_DIR)
     print("Seed complete.")
     return 0
