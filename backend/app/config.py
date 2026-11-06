@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     rate_limit_per_minute: int = Field(default=5, ge=1)
     daily_query_limit: int = Field(default=200, ge=1)
-    trusted_proxy_hops: int = Field(default=0, ge=0)
+    client_ip_header: str = ""
 
     llm_provider: str = "anthropic"
     llm_model: str = "claude-opus-5-5"

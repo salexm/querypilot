@@ -64,19 +64,18 @@ Both should return `{"status":"ok"}`. Then open the web app and ask a question.
 
 ### Check that the rate limit can't be bypassed
 
-Send 7 requests, each with a different forged address. The last ones must return 429:
+Send 7 requests, each with a different forged address. The last two must return 429:
 
 ```bash
 for i in 1 2 3 4 5 6 7; do
   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://API_URL/query \
     -H "Content-Type: application/json" \
-    -H "X-Forwarded-For: 10.0.0.$i" \
+    -H "X-Forwarded-For: 10.0.0.$i" -H "CF-Connecting-IP: 10.0.0.$i" \
     -d '{"question":"How many orders are there?"}'
 done
 ```
 
-- **All return 200:** `TRUSTED_PROXY_HOPS` is too high, so visitors can forge their address. Lower it.
-- **A friend on another network is blocked straight after you:** `TRUSTED_PROXY_HOPS` is too low, so everyone shares one address. Raise it.
+If every request gets through, `CLIENT_IP_HEADER` doesn't match the header your host sets. Don't use `X-Forwarded-For` for this: on Render it holds client-supplied values and proxy addresses that change between requests.
 
 ## Costs and limits
 
