@@ -53,6 +53,7 @@ This is the planned layout. `backend/alembic/` and `backend/app/store/` don't ex
 querypilot/
 ├── docker-compose.yml
 ├── render.yaml                # Render services for the public demo
+├── neon.ts                    # Neon project config, with package.json for its CLI
 ├── .env.example
 ├── CONTRIBUTING.md
 ├── .github/                   # CI, issue templates, PR template
@@ -126,6 +127,7 @@ These apply to all work, because the repo is public and the app runs LLM-generat
 - Always enforce the statement timeout and row cap.
 - Keep the per-IP and daily limits on `/query`, because every call spends real money.
 - Create the read-only role on hosted databases with SQL through the seed, never in a provider's console, which can grant writes.
+- Never give the API `DATABASE_URL`. Neon's CLI pulls that owner login into `.env`, and it's only for the seed. The API connects with the `POSTGRES_*` settings and the read-only role.
 - Never commit real keys, passwords, or `.env` files. Add new settings to `.env.example` with placeholder values.
 - Never put secrets in `VITE_*` variables, because they're exposed to the browser.
 - Review eval output before committing it, because it can contain full prompts and query results.
