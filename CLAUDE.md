@@ -16,9 +16,9 @@ QueryPilot is a natural-language-to-SQL analytics assistant and a public portfol
 | 5 | History and traces | Not started |
 | 6 | Benchmark: baseline accuracy, latency, cost | Done, but the question set is too easy to show improvement |
 | 7 | Self-correction: retry loop, before-and-after results | Done, but the benchmark is too easy to show a gain |
-| 8 | Portfolio polish: README results, diagram, demo GIF | In progress: the demo GIF and live URL remain |
+| 8 | Portfolio polish: README results, diagram, demo GIF | In progress: the demo GIF and the README's live link wait on Anthropic credit |
 
-The public demo runs on Render and Neon free tiers. See `docs/deployment.md`.
+The app is deployed on Render and Neon free tiers at `https://querypilot-web.onrender.com`, with the API at `https://querypilot-api-hqq2.onrender.com`. See `docs/deployment.md`. `LLM_API_KEY` on Render is a placeholder until Anthropic credit is added, so the live site can't answer questions yet. The README says "coming soon" on purpose until it can.
 
 Open decisions: target roles. Don't assume an answer; ask when the work depends on one.
 
@@ -125,7 +125,7 @@ These apply to all work, because the repo is public and the app runs LLM-generat
 - Keep the Postgres role as the main protection and the validator as a second layer. Don't weaken either one to make a query work.
 - Validate SQL by parsing it with `sqlglot`, not with regex.
 - Always enforce the statement timeout and row cap.
-- Keep the per-IP and daily limits on `/query`, because every call spends real money.
+- Keep the per-IP and daily limits on `/query`, because every call spends real money. On Render, identify visitors with `CF-Connecting-IP`, not `X-Forwarded-For`.
 - Create the read-only role on hosted databases with SQL through the seed, never in a provider's console, which can grant writes.
 - Never give the API `DATABASE_URL`. Neon's CLI pulls that owner login into `.env`, and it's only for the seed. The API connects with the `POSTGRES_*` settings and the read-only role.
 - Never commit real keys, passwords, or `.env` files. Add new settings to `.env.example` with placeholder values.
