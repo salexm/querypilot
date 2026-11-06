@@ -25,6 +25,8 @@ The spend limit is the hard stop. The app's own limits reset when the free API s
 2. Open its connection details, and copy the direct host, not the one containing `-pooler`.
 3. Copy `db/seed/neon.env.example` to `.env.neon` at the repo root, and fill it in. Use a long, random password for the read-only role.
 
+If you use the Neon CLI, `neon init` and `neon deploy` link the project through `neon.ts` and add an owner `DATABASE_URL` to `.env`. Use that login only to load data, and never give it to the API.
+
 Don't create the read-only role in the Neon console. Console-created roles get broad rights, including writes. The seed creates it with SQL instead.
 
 ## 3. Load the data
