@@ -106,39 +106,50 @@ def test_daily_limit_covers_all_visitors_together() -> None:
     assert caught.value.code == "daily_limit_reached"
 
 
-def fake_request(forwarded: str | None, host: str = "10.0.0.1") -> Any:
-    headers = {"x-forwarded-for": forwarded} if forwarded is not None else {}
+def fake_request(headers: dict[str, str], host: str = "10.0.0.1") -> Any:
     return SimpleNamespace(headers=headers, client=SimpleNamespace(host=host))
 
 
-@pytest.mark.parametrize(
-    ("forwarded", "hops", "expected"),
-    [
-        (None, 0, "10.0.0.1"),
-        ("1.1.1.1", 0, "10.0.0.1"),
-        ("1.1.1.1", 1, "1.1.1.1"),
-        ("6.6.6.6, 1.1.1.1", 1, "1.1.1.1"),
-        ("6.6.6.6, 1.1.1.1, 2.2.2.2", 2, "1.1.1.1"),
-        ("1.1.1.1", 2, "10.0.0.1"),
-        (None, 1, "10.0.0.1"),
-        ("", 1, "10.0.0.1"),
-    ],
-)
-def test_client_ip_counts_from_the_right(forwarded: str | None, hops: int, expected: str) -> None:
-    assert client_ip(fake_request(forwarded), hops) == expected
+def test_client_ip_uses_the_socket_address_without_a_configured_header() -> None:
+    request = fake_request({"cf-connecting-ip": "1.1.1.1", "x-forwarded-for": "2.2.2.2"})
+
+    assert client_ip(request, "") == "10.0.0.1"
 
 
-def test_forged_forwarded_entries_cannot_change_the_identity() -> None:
-    first = client_ip(fake_request("6.6.6.6, 1.1.1.1"), 1)
-    second = client_ip(fake_request("7.7.7.7, 1.1.1.1"), 1)
+def test_client_ip_reads_the_configured_header() -> None:
+    request = fake_request({"cf-connecting-ip": "1.1.1.1"})
 
-    assert first == second == "1.1.1.1"
+    assert client_ip(request, "cf-connecting-ip") == "1.1.1.1"
+
+
+@pytest.mark.parametrize("headers", [{}, {"cf-connecting-ip": ""}, {"cf-connecting-ip": "  "}])
+def test_client_ip_falls_back_when_the_header_is_missing(headers: dict[str, str]) -> None:
+    assert client_ip(fake_request(headers), "cf-connecting-ip") == "10.0.0.1"
+
+
+def test_rotating_proxy_addresses_cannot_create_new_identities() -> None:
+    """Regression: on Render, X-Forwarded-For changed per request, so limits never fired."""
+    identities = {
+        client_ip(
+            fake_request(
+                {
+                    "cf-connecting-ip": "1.1.1.1",
+                    "x-forwarded-for": f"6.6.6.{index}, 172.68.0.{index}",
+                },
+                host=f"10.0.0.{index}",
+            ),
+            "cf-connecting-ip",
+        )
+        for index in range(10)
+    }
+
+    assert identities == {"1.1.1.1"}
 
 
 def test_client_ip_handles_a_missing_client() -> None:
     request = SimpleNamespace(headers={}, client=None)
 
-    assert client_ip(request, 0) == "unknown"  # type: ignore[arg-type]
+    assert client_ip(request, "") == "unknown"  # type: ignore[arg-type]
 
 
 @pytest.fixture

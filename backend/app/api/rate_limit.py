@@ -84,19 +84,17 @@ class QueryLimits:
             raise RateLimitExceededError("daily_limit_reached", message, wait)
 
 
-def client_ip(request: Request, trusted_proxy_hops: int) -> str:
-    """Find the visitor's address without trusting anything they can forge.
+def client_ip(request: Request, header_name: str) -> str:
+    """Find the visitor's address.
 
-    Each proxy appends to X-Forwarded-For, so only the entries added by our own
-    proxies, counted from the right, are reliable. Anything further left came
-    from the client.
+    Behind a proxy, the socket address is the proxy, and X-Forwarded-For holds
+    client-supplied entries and rotating proxy addresses. So hosted deployments
+    name a header their edge sets itself, and overwrites on every request.
     """
     direct = request.client.host if request.client else "unknown"
-    if trusted_proxy_hops == 0:
+    if not header_name:
         return direct
-    forwarded = request.headers.get("x-forwarded-for", "")
-    entries = [entry.strip() for entry in forwarded.split(",") if entry.strip()]
-    return entries[-trusted_proxy_hops] if len(entries) >= trusted_proxy_hops else direct
+    return request.headers.get(header_name, "").strip() or direct
 
 
 @lru_cache
@@ -110,4 +108,4 @@ def enforce_query_limits(
     settings: Annotated[Settings, Depends(get_settings)],
     limits: Annotated[QueryLimits, Depends(get_query_limits)],
 ) -> None:
-    limits.check(client_ip(request, settings.trusted_proxy_hops))
+    limits.check(client_ip(request, settings.client_ip_header))
